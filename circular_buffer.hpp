@@ -14,9 +14,22 @@ namespace jm
         using const_reference_type = const value_type&;
         
     private:
-        size_type        _first;
+        size_type        _head;
+        size_type        _tail;
         size_type        _size;
         std::array<T, N> _buffer;
+        
+        constexpr void inc_tail() noexcept
+        {
+            tail = (tail + 1) % N; 
+            ++_size;
+        }
+        
+        constexpr void inc_head() noexcept
+        {
+            head = (head + 1) % N; 
+            --_size;
+        }
         
         constexpr size_type mask(size_type idx) const noexcept
         {
@@ -47,49 +60,59 @@ namespace jm
         {
             return N; 
         }
-        
+       
     /// element access
         constexpr reference_type front() noexcept
         {
-            return _buffer[_first];
+            return _buffer[_head];
         }
         
         constexpr const_reference_type front() const noexcept
         {
-            return _buffer[_first];
+            return _buffer[_head];
         }
         
         constexpr reference_type back() noexcept
         {
-            return _buffer[mask(_first + _size - 1)];
+            return _buffer[_tail];
         }
         
         constexpr const_reference_type back() const noexcept
         {
-            return _buffer[mask(_first + _size - 1)];
+            return _buffer[_tail];
         }
         
         /// modifiers
-        constexpr void push(const value_type& value)
+        void push(const value_type& value)
         {
-            _buffer[mask(_first + _size)] = value;
-            push();
+            auto new_tail = (_tail + 1) % N;
+            if(_size == N)
+                inc_head();
+            _buffer[new_tail] = value; 
+            _tail = new_tail;
+            ++_size;
         }
         
-        constexpr void push(value_type&& value)
+        void push(value_type&& value)
         {
-            _buffer[mask(_first + _size)] = std::move(value);
-            push();
+            auto new_tail = (_tail + 1) % N;
+            if(_size == N)
+                inc_head();
+            _buffer[new_tail] = std::move(value); 
+            _tail = new_tail;
+            ++_size;
         }
         
-        constexpr pop()
+        void pop()
         {
+            inc_head();
             back.~value_type();
-            --_size;
         }
-        template< class... Args >
+        
+        template<typename... Args>
         void emplace( Args&&... args );
         {
+            
         }
         
     };
