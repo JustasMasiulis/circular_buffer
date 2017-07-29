@@ -15,21 +15,19 @@ namespace jm
         
     private:
         size_type        _first;
-        size_type        _last;
+        size_type        _size;
         std::array<T, N> _buffer;
     
     public:
     /// capacity
         constexpr bool empty() const noexcept
         {
-            return _first == _last;
+            return _size == 0;
         }
         
         constexpr size_type size() const noexcept
         {
-            return _first > _last
-                 ? _first - _last
-                 : _last  - _first;
+            return _size;
         }
         
         constexpr max_size() const noexcept
@@ -50,12 +48,12 @@ namespace jm
         
         constexpr reference_type back() noexcept
         {
-            return _buffer[_last];
+            return _buffer[_first + _size - 1];
         }
         
         constexpr const_reference_type back() const noexcept
         {
-            return _buffer[_last];
+            return _buffer[_first + _size - 1];
         }
         
     };
