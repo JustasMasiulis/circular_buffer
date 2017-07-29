@@ -82,6 +82,16 @@ namespace jm
             push();
         }
         
+        constexpr pop()
+        {
+            back.~value_type();
+            --_size;
+        }
+        template< class... Args >
+        void emplace( Args&&... args );
+        {
+        }
+        
     };
 
 }
