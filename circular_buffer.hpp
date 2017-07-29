@@ -17,6 +17,19 @@ namespace jm
         size_type        _first;
         size_type        _size;
         std::array<T, N> _buffer;
+        
+        constexpr size_type mask(size_type idx) const noexcept
+        {
+            return idx % (N - 1);
+        }
+        
+        constexpr void push() noexcept
+        {
+            if(_size == N)
+                _first = (_first + 1) % N;
+            else
+                ++_size;
+        }
     
     public:
     /// capacity
@@ -48,12 +61,25 @@ namespace jm
         
         constexpr reference_type back() noexcept
         {
-            return _buffer[_first + _size - 1];
+            return _buffer[mask(_first + _size - 1)];
         }
         
         constexpr const_reference_type back() const noexcept
         {
-            return _buffer[_first + _size - 1];
+            return _buffer[mask(_first + _size - 1)];
+        }
+        
+        /// modifiers
+        constexpr void push(const value_type& value)
+        {
+            _buffer[mask(_first + _size)] = value;
+            push();
+        }
+        
+        constexpr void push(value_type&& value)
+        {
+            _buffer[mask(_first + _size)] = std::move(value);
+            push();
         }
         
     };
