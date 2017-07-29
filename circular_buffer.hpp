@@ -37,6 +37,27 @@ namespace jm
             return N; 
         }
         
+    /// element access
+        constexpr reference_type front() noexcept
+        {
+            return _buffer[_first];
+        }
+        
+        constexpr const_reference_type front() const noexcept
+        {
+            return _buffer[_first];
+        }
+        
+        constexpr reference_type back() noexcept
+        {
+            return _buffer[_last];
+        }
+        
+        constexpr const_reference_type back() const noexcept
+        {
+            return _buffer[_last];
+        }
+        
     };
 
 }
