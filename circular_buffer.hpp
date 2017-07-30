@@ -80,35 +80,62 @@ namespace jm
         }
         
         /// modifiers
-        void push_front(const value_type& value)
+        void push_back(const value_type& value)
         {
-            auto new_tail = (_tail + 1) % N;
-            if(_size == N)
-                inc_head();
+            auto new_tail = increment(_tail);
+            if(_size == N) {
+                _head = increment(_head);
+                --_size;
+            }
             _buffer[new_tail] = value; 
             _tail = new_tail;
             ++_size;
         }
         
-        void push_front(value_type&& value)
+        void push_back(value_type&& value)
         {
-            auto new_tail = (_tail + 1) % N;
-            if(_size == N)
-                inc_head();
-            _buffer[new_tail] = std::move(value); 
+            auto new_tail = increment(_tail);
+            if(_size == N) {
+                _head = increment(_head);
+                --_size;
+            }
+            _buffer[new_tail] = value; 
             _tail = new_tail;
             ++_size;
         }
         
-        void push_back(const value_type& value)
+        void push_front(const value_type& value)
         {
-            
+            auto new_head = decrement(_head);
+            if(_size == N) {
+                _tail = decrement(_tail);
+                --_size;
+            }
+            _buffer[new_head] = value; 
+            _head = new_head;
+        }
+        
+        void push_front(value_type&& value)
+        {
+            auto new_head = decrement(_head);
+            if(_size == N) {
+                _tail = decrement(_tail);
+                --_size;
+            }
+            _buffer[new_head] = std::move(value); 
+            _head = new_head;
+        }
+        
+        void pop_back() noexcept
+        {
+            auto old_tail = _tail;
+            _tail = decrement(_tail);
+            _buffer[old_tail].~value_type();
         }
         
         void pop_front() noexcept
         {
-            inc_head();
-            back.~value_type();
+            
         }
         
         template<typename... Args>
