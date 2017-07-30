@@ -113,9 +113,11 @@ namespace jm
         void emplace( Args&&... args );
         {
             auto new_tail = (_tail + 1) % N;
-            if(_size == N)
+            if(_size == N){
                 inc_head();
-            _buffer[new_tail].~value_type();
+                _buffer[new_tail].~value_type();
+            }
+          
             new (&_buffer[new_tail]) value_type(std::forward<Args>(args)...); 
             _tail = new_tail;
             ++_size;
