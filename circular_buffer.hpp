@@ -19,18 +19,6 @@ namespace jm
         size_type        _size;
         std::array<T, N> _buffer;
         
-        constexpr void inc_tail() noexcept
-        {
-            tail = (tail + 1) % N; 
-            ++_size;
-        }
-        
-        constexpr void inc_head() noexcept
-        {
-            head = (head + 1) % N; 
-            --_size;
-        }
-        
         constexpr size_type increment(size_type idx) const noexcept
         {
             return (idx + 1) % N;
@@ -135,7 +123,9 @@ namespace jm
         
         void pop_front() noexcept
         {
-            
+            auto old_head = _head;
+            _head = decrement(_head);
+            _buffer[old_head].~value_type();
         }
         
         template<typename... Args>
