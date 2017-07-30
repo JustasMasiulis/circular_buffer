@@ -31,17 +31,14 @@ namespace jm
             --_size;
         }
         
-        constexpr size_type mask(size_type idx) const noexcept
+        constexpr size_type increment(size_type idx) const noexcept
         {
-            return idx % (N - 1);
+            return (idx + 1) % N;
         }
         
-        constexpr void push() noexcept
+        constexpr size_type decrement(size_type idx) const noexcept
         {
-            if(_size == N)
-                _first = (_first + 1) % N;
-            else
-                ++_size;
+            return (idx + N) % (N + 1);
         }
     
     public:
@@ -83,7 +80,7 @@ namespace jm
         }
         
         /// modifiers
-        void push(const value_type& value)
+        void push_front(const value_type& value)
         {
             auto new_tail = (_tail + 1) % N;
             if(_size == N)
@@ -93,7 +90,7 @@ namespace jm
             ++_size;
         }
         
-        void push(value_type&& value)
+        void push_front(value_type&& value)
         {
             auto new_tail = (_tail + 1) % N;
             if(_size == N)
@@ -103,7 +100,12 @@ namespace jm
             ++_size;
         }
         
-        void pop() noexcept
+        void push_back(const value_type& value)
+        {
+            
+        }
+        
+        void pop_front() noexcept
         {
             inc_head();
             back.~value_type();
