@@ -1,10 +1,11 @@
 #define CATCH_CONFIG_MAIN
 #include <circular_buffer.hpp>
-#include "Catch/include/catch.hpp"
+#include "../Catch/include/catch.hpp"
+
 #include <algorithm>
-#include <vector>
 #include <numeric>
-#include <list>
+#include <vector>
+
 
 std::vector<int> gen_incremental_vector() {
     constexpr auto size = 512;
