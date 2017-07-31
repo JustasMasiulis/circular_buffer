@@ -191,3 +191,23 @@ TEST_CASE("circular_buffer_iterator complies to InputIterator")
 
     /// TODO finish this...
 }
+
+TEST_CASE("circular_buffer_iterator complies to ForwardIterator")
+{
+    using cbt = jm::circular_buffer<int, 4>;
+    using cbi = cbt::iterator;
+    {
+        cbi u;
+    }
+    {
+        cbi u{};
+    }
+    {
+        cbi();
+    }
+    {
+        cbi{};
+    }
+    
+    // TODO finish this
+}
