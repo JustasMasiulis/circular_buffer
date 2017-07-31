@@ -81,3 +81,113 @@ TEST_CASE("push_front works correctly")
 
     REQUIRE(cb.size() == cb.max_size());
 }
+
+TEST_CASE("circular_buffer_iterator complies to Iterator")
+{
+    using cbt = jm::circular_buffer<int, 4>;
+    cbt cb;
+    cb.push_back(1);
+    cb.push_back(2);
+
+        auto r = cb.begin();
+        // CopyConstructible
+        {
+            // MoveConstructible 
+            {
+                auto v = cb.begin();
+
+                REQUIRE(v == cb.begin());
+                REQUIRE(cbt::iterator(cb.begin()) == cb.begin());
+            }
+            
+            auto v = cb.begin();
+            {
+                auto u = r;
+                REQUIRE(u == v);
+                REQUIRE(v == r);
+            }
+            {
+                REQUIRE(cbt::iterator(v) == v);
+                REQUIRE(v == r);
+            }
+             
+        }
+
+        // CopyAssignable
+        {
+            // MoveAssignable 
+            {
+                auto t = cb.begin();
+                t = cb.begin();
+                static_assert(std::is_same<decltype(t = cb.begin()), cbt::iterator&>::value
+                              , "t = cb.begin() doesnt return T&");
+                
+                REQUIRE((t = cb.end()) == t);
+            }
+            {
+                auto t = cb.begin();
+                auto v = cb.end();
+                static_assert(std::is_same<decltype(t = v), cbt::iterator&>::value
+                              , "t = cb.begin() doesnt return T&");
+
+                REQUIRE((t = v) == t);
+            }
+        }
+
+        // Swappable
+        {
+            using std::swap;
+            auto u = cb.begin();
+            auto t = cb.end();
+
+            swap(u, t);
+            REQUIRE(u == cb.end());
+            REQUIRE(t == cb.begin());
+
+            swap(t, u);
+            REQUIRE(u == cb.begin());
+            REQUIRE(t == cb.end());
+        }
+
+        {
+            using value_type = cbt::iterator::value_type; // has all the typedefs
+            using difference_type = cbt::iterator::difference_type;
+            using reference = cbt::iterator::reference;
+            using pointer = cbt::iterator::pointer;
+            using iterator_category = cbt::iterator::iterator_category;
+        }
+        *r; // r is dereferenceable
+        ++r; // r is incrementable
+        static_assert(std::is_same<decltype(++r), decltype(r)&>::value, "++it doesnt return It&");
+}
+
+TEST_CASE("circular_buffer_iterator complies to InputIterator")
+{
+    using cbt = jm::circular_buffer<int, 4>;
+    cbt cb;
+    cb.push_back({ 1 });
+    cb.push_back({ 2 });
+
+    // EqualityComparable
+    {
+        auto a = cb.begin();
+        auto b = cb.begin();
+        auto c = b;
+
+        REQUIRE(a == a);
+        REQUIRE(a == b);
+        REQUIRE(b == a);
+        REQUIRE(a == c);
+
+        static_assert(std::is_same<bool, decltype(a == b)>::value, "a==b not bool");
+    }
+
+    auto i = cb.begin();
+    auto j = cb.end();
+
+    REQUIRE(((void)*i, *i) == *i);
+
+    REQUIRE((i != j) == (!(i == j)));
+
+    /// TODO finish this...
+}

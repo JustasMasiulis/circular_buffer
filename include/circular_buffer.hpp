@@ -34,6 +34,12 @@ namespace jm
             , _pos(pos)
         {}
 
+        template<typename Tnc>
+        circular_buffer_iterator(const circular_buffer_iterator<Tnc, N> lhs)
+            : _buf(lhs._buf)
+            , _pos(lhs._pos)
+        {}
+
         reference operator*() const
         {
             return *(_buf + _pos);
