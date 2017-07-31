@@ -7,66 +7,66 @@
 namespace jm
 {
 
-
-
-    template<typename T>
+    template<typename T, std::size_t N>
     class circular_buffer_iterator
         : public std::iterator<std::bidirectional_iterator_tag
-                              , typename T::value_type
-                              , typename T::difference_type
-                              , typename T::pointer
-                              , typename T::reference>
+                              ,  T
+                              ,  ptrdiff_t
+                              ,  T*
+                              ,  T&>
     {
-        pointer _buf;
-        pointer _cur;
+        pointer     _buf;
+        std::size_t _pos;
 
-        void increment()
+        void increment() const noexcept
         {
-            _cur = _buf + (_buf - _cur) % T{}.max_size();
+            _pos = (_pos + 1) % N;
+        }
+
+        void decrement() const noexcept
+        {
+            return (_pos + N) % (N + 1);
         }
 
     public:
-        circular_buffer_iterator(const circular_buffer_iterator&);
-        ~circular_buffer_iterator();
-        circular_buffer_iterator& operator=(const circular_buffer_iterator&);
-
-
-
-        iterator& operator--(); //prefix increment
-        iterator operator--(int); //postfix decrement
-
-        circular_buffer_iterator& operator++(); //prefix increment
-        {
-            ++_cur;
-            return *this;
-        }
-
-        circular_buffer_iterator operator++(int); //postfix increment
-        {
-
-        }
-
-
+        circular_buffer_iterator() = default;
+        explicit circular_buffer_iterator(pointer buf, std::size_t pos)
+            : _buf(buf)
+            , _pos(pos)
+        {}
 
         reference operator*() const
         {
-            return *_cur;
+            return *(_buf + _pos)
         }
-
-        value_type operator*() const
-        {
-            return *_cur;
-        }
-
         pointer operator->() const
         {
-            return _cur;
+            return _buf + _pos;
         }
 
-        friend bool operator==(const iterator&, const iterator&);
-        friend bool operator!=(const iterator&, const iterator&);
-        friend void swap(iterator& lhs, iterator& rhs); //C++11 I think
+        circular_buffer_iterator& operator++()
+        {
+            increment();
+            return *this;
+        }
+        circular_buffer_iterator& operator--()
+        {
+            decrement();
+            return *this;
+        }
 
+        circular_buffer_iterator operator++(int)
+        {
+            auto temp = *this;
+            increment();
+            return temp;
+        }
+        circular_buffer_iterator operator--(int)
+        {
+            auto temp = *this;
+            decrement();
+            return temp;
+        }
     };
 
     template<typename T, std::size_t N>
@@ -76,12 +76,12 @@ namespace jm
         using value_type             = T; 
         using size_type              = std::size_t;
         using difference_type        = std::ptrdiff_t;
-        using reference_type         = value_type&;
-        using const_reference_type   = const value_type&;
+        using reference              = value_type&;
+        using const_reference        = const value_type&;
         using pointer                = value_type*;
         using const_pointer          = const value_type*;
-        using iterator               = ;
-        using const_iterator         = ;
+        using iterator               = circular_buffer_iterator<T, N>;
+        using const_iterator         = circular_buffer_iterator<const T, N>;
         using reverse_iterator       = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
         
@@ -109,7 +109,7 @@ namespace jm
         template<typename... Args>
         inline void construct(size_type idx, Args&&... args)
         {
-            new (&_buffer[new_tail]) T(std::forward<Args>(args)...);
+            new (&_buffer[idx]) T(std::forward<Args>(args)...);
         }
     
     public:
@@ -135,29 +135,29 @@ namespace jm
         }
        
     /// element access
-        constexpr reference_type front() noexcept
+        constexpr reference front() noexcept
         {
             return _buffer[_head];
         }
         
-        constexpr const_reference_type front() const noexcept
+        constexpr const_reference front() const noexcept
         {
             return _buffer[_head];
         }
         
-        constexpr reference_type back() noexcept
+        constexpr reference back() noexcept
         {
             return _buffer[_tail];
         }
         
-        constexpr const_reference_type back() const noexcept
+        constexpr const_reference back() const noexcept
         {
             return _buffer[_tail];
         }
 
         constexpr T* data() noexcept
         {
-            return &_buffer;
+            return _buffer;
         }
 
         constexpr const T* data() const noexcept
@@ -165,7 +165,7 @@ namespace jm
             return &_buffer;
         }
         
-        /// modifiers
+    /// modifiers
         void push_back(const value_type& value)
         {
             auto new_tail = increment(_tail);
@@ -248,7 +248,67 @@ namespace jm
             while (_size != 0)
                 pop_back();
         }
-        
+
+    /// iterators
+        iterator begin() noexcept
+        {
+            return iterator(_buffer, _head);
+        }
+
+        const_iterator begin() const noexcept
+        {
+            return const_iterator(_buffer, _head);
+        }
+
+        const_iterator cbegin() const noexcept
+        {
+            return const_iterator(_buffer, _head);
+        }
+
+        reverse_iterator rbegin() noexcept
+        {
+            return reverse_iterator(_buffer, _head);
+        }
+
+        const_reverse_iterator  rbegin() const noexcept
+        {
+            return const_reverse_iterator(_buffer, _head);
+        }
+
+        const_reverse_iterator  crbegin() const noexcept
+        {
+            return const_reverse_iterator(_buffer, _head);
+        }
+
+        iterator end() noexcept
+        {
+            return iterator(_buffer, _tail);
+        }
+
+        const_iterator end() const noexcept
+        {
+            return const_iterator(_buffer, _tail);
+        }
+
+        const_iterator cend() const noexcept
+        {
+            return const_iterator(_buffer, _tail);
+        }
+
+        reverse_iterator rend() noexcept
+        {
+            return reverse_iterator(_buffer, _tail);
+        }
+
+        const_reverse_iterator  rend() const noexcept
+        {
+            return const_reverse_iterator(_buffer, _tail);
+        }
+
+        const_reverse_iterator  crend() const noexcept
+        {
+            return const_reverse_iterator(_buffer, _tail);
+        }
     };
 
 }
