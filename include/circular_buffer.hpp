@@ -2,6 +2,7 @@
 #define JM_CIRCULAR_BUFFER_HPP
 
 #include <iterator>
+#include <initializer_list>
 
 namespace jm
 {
@@ -133,11 +134,45 @@ namespace jm
         }
     
     public:
-        circular_buffer()
+        explicit circular_buffer()
             : _head(1)
             , _tail(0)
             , _size(0)
         {}
+
+        explicit circular_buffer(size_type count, const T& value)
+            : _head(0)
+            , _tail(count - 1)
+            , _size(count)
+        {
+            if (count > N)
+                throw std::range_error("circular_buffer<T, N>(size_type count, const T&) count exceeded N");
+
+            std::fill(_buffer, _buffer + count, value);
+        }
+
+        template<typename InputIt>
+        circular_buffer(InputIt first, InputIt last)
+        {
+            if (std::distance(first, last) > N)
+                throw std::range_error("circular_buffer<T, N>(InputIt first, InputIt last) distance exceeded N");
+            std::copy(first, last, _buffer);
+        }
+
+        circular_buffer(const circular_buffer& other)
+            : _head(other._head)
+            , _tail(other._tail)
+            , _size(other._size)
+        {
+            if (_head > _tail)
+                std::copy(other._buffer + _tail, other._buffer + _head, _buffer + _tail);
+            else
+                std::copy(other._buffer + _head, other._buffer + _tail, _buffer + _head);
+        }
+
+        circular_buffer(circular_buffer&& other);
+
+        circular_buffer(std::initializer_list<T> init);
 
     /// capacity
         constexpr bool empty() const noexcept
