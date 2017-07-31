@@ -1,6 +1,6 @@
-[submodule "test/Catch"]
-	path = test/Catch
+[submodule "Catch"]
+	path = Catch
 	url = https://github.com/philsquared/Catch
-[submodule "include/circular_buffer/config"]
-	path = include/circular_buffer/config
+[submodule "config"]
+	path = config
 	url = https://github.com/boostorg/config
