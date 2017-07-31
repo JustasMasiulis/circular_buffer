@@ -2,7 +2,6 @@
 #define JM_CIRCULAR_BUFFER_HPP
 
 #include <iterator>
-#include <list>
 
 namespace jm
 {
@@ -18,14 +17,14 @@ namespace jm
         pointer     _buf;
         std::size_t _pos;
 
-        void increment() const noexcept
+        void increment() noexcept
         {
             _pos = (_pos + 1) % N;
         }
 
-        void decrement() const noexcept
+        void decrement() noexcept
         {
-            return (_pos + N) % (N + 1);
+            return (_pos + N) % (N);
         }
 
     public:
@@ -37,7 +36,7 @@ namespace jm
 
         reference operator*() const
         {
-            return *(_buf + _pos)
+            return *(_buf + _pos);
         }
         pointer operator->() const
         {
@@ -67,7 +66,22 @@ namespace jm
             decrement();
             return temp;
         }
+
+        template<typename Tx>
+        bool operator==(const circular_buffer_iterator<Tx, N>& lhs)
+        {
+            return lhs._pos == _pos && lhs._buf == _buf;
+        }
+
+        template<typename Tx>
+        bool operator!=(const circular_buffer_iterator<Tx, N>& lhs)
+        {
+            return !(operator==(lhs));
+        }
     };
+ 
+
+    
 
     template<typename T, std::size_t N>
     class circular_buffer
@@ -98,7 +112,7 @@ namespace jm
         
         constexpr size_type decrement(size_type idx) const noexcept
         {
-            return (idx + N) % (N + 1);
+            return (idx + N - 1) % (N);
         }
 
         constexpr void destroy(size_type idx) noexcept
@@ -113,6 +127,12 @@ namespace jm
         }
     
     public:
+        circular_buffer()
+            : _head(1)
+            , _tail(0)
+            , _size(0)
+        {}
+
     /// capacity
         constexpr bool empty() const noexcept
         {
@@ -176,9 +196,6 @@ namespace jm
             _buffer[new_tail] = value; 
             _tail = new_tail;
             ++_size;
-
-            std::list<int> v;
-            v.begin()
         }
         
         void push_back(value_type&& value)
@@ -202,6 +219,7 @@ namespace jm
             }
             _buffer[new_head] = value; 
             _head = new_head;
+            ++_size;
         }
         
         void push_front(value_type&& value)
@@ -213,6 +231,7 @@ namespace jm
             }
             _buffer[new_head] = std::move(value); 
             _head = new_head;
+            ++_size;
         }
         
         template<typename... Args>
@@ -247,37 +266,52 @@ namespace jm
         {
             while (_size != 0)
                 pop_back();
+
+            _head = 1;
+            _tail = 0;
         }
 
     /// iterators
         iterator begin() noexcept
         {
+            if (_size == 0)
+                return end();
             return iterator(_buffer, _head);
         }
 
         const_iterator begin() const noexcept
         {
+            if (_size == 0)
+                return end();
             return const_iterator(_buffer, _head);
         }
 
         const_iterator cbegin() const noexcept
         {
+            if (_size == 0)
+                return cend();
             return const_iterator(_buffer, _head);
         }
 
         reverse_iterator rbegin() noexcept
         {
-            return reverse_iterator(_buffer, _head);
+            if (_size == 0)
+                return rend();
+            return reverse_iterator(iterator{ _buffer, _head });
         }
 
         const_reverse_iterator  rbegin() const noexcept
         {
-            return const_reverse_iterator(_buffer, _head);
+            if (_size == 0)
+                return rend();
+            return const_reverse_iterator(const_iterator{ _buffer, _head });
         }
 
         const_reverse_iterator  crbegin() const noexcept
         {
-            return const_reverse_iterator(_buffer, _head);
+            if (_size == 0)
+                return crend();
+            return const_reverse_iterator(const_iterator{ _buffer, _head });
         }
 
         iterator end() noexcept
@@ -297,17 +331,17 @@ namespace jm
 
         reverse_iterator rend() noexcept
         {
-            return reverse_iterator(_buffer, _tail);
+            return reverse_iterator(iterator{ _buffer, _tail });
         }
 
-        const_reverse_iterator  rend() const noexcept
+        const_reverse_iterator rend() const noexcept
         {
-            return const_reverse_iterator(_buffer, _tail);
+            return const_reverse_iterator(const_iterator{ _buffer, _tail });
         }
 
-        const_reverse_iterator  crend() const noexcept
+        const_reverse_iterator crend() const noexcept
         {
-            return const_reverse_iterator(_buffer, _tail);
+            return const_reverse_iterator(const_iterator{ _buffer, _tail });
         }
     };
 
