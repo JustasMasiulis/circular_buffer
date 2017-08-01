@@ -282,11 +282,13 @@ namespace jm
             , _size(count)
             , _buffer()
         {
-            if (count > N)
+            if (BOOST_UNLIKELY(_size > N))
                 throw std::out_of_range("circular_buffer<T, N>(size_type count, const T&) count exceeded N");
-
-            for (size_type i = 0; i < count; ++i)
-                _buffer[i] = storage_type(value);
+            else if (BOOST_LIKELY(_size != 0))
+                for (size_type i = 0; i < count; ++i)
+                    _buffer[i] = storage_type(value);
+            else
+                _head = 1;
         }
 
         template<typename InputIt>
@@ -296,7 +298,7 @@ namespace jm
             , _size(0)
             , _buffer()
         {
-            if (first == last)
+            if (BOOST_UNLIKELY(first == last))
                 _head = 1;
             else {
                 storage_type* buf_ptr = _buffer;
@@ -319,8 +321,10 @@ namespace jm
             , _size(init.size())
             , _buffer()
         {
-            if (_size > N)
+            if (BOOST_UNLIKELY(_size > N))
                 throw std::out_of_range("circular_buffer<T, N>(std::initializer_list<T> init) init.size() > N");
+            else if (BOOST_UNLIKELY(_size == 0))
+                _head = 1;
 
             storage_type* buf_ptr = _buffer;
             for (auto it = init.begin(), end = init.end(); it != end; ++it, ++buf_ptr)
