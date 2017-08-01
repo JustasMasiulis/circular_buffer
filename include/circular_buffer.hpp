@@ -1,12 +1,36 @@
 #ifndef JM_CIRCULAR_BUFFER_HPP
 #define JM_CIRCULAR_BUFFER_HPP
 
+#ifndef JM_CIRCULAR_BUFFER_NO_BOOST
+#include <boost/config.hpp>
+#endif // !JM_CIRCULAR_BUFFER_NO_BOOST
+
 #include <iterator>
 #include <algorithm>
+#include <stdexcept>
+
+#ifndef BOOST_NO_INITIALIZER_LISTS
 #include <initializer_list>
+#endif // !BOOST_NO_INITIALIZER_LISTS
 
-#include <boost/config.hpp>
+#ifdef JM_CIRCULAR_BUFFER_NO_BOOST // defaults to c++11 features
+    #define BOOST_LIKELY(expr) expr
+    #define BOOST_UNLIKELY(expr) expr
 
+    #ifndef JM_CIRCULAR_BUFFER_CXX_OLD
+        #define BOOST_CONSTEXPR constexpr
+        #define BOOST_NOEXCEPT noexcept
+    #else
+        #define BOOST_CONSTEXPR
+        #define BOOST_NOEXCEPT
+    #endif
+
+    #ifdef JM_CIRCULAR_BUFFER_CXX14
+        #define BOOST_CXX14_CONSTEXPR constexpr
+    #else
+        #define BOOST_CXX14_CONSTEXPR
+    #endif
+#endif
 
 #if defined(CIRCULAR_BUFFER_LIKELY_FULL)
     #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) BOOST_LIKELY(expr)
@@ -16,10 +40,16 @@
     #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) expr
 #endif
 
-#ifdef BOOST_NO_NULLPTR
-    #define JM_NULLPTR NULL
+#if defined(BOOST_NO_NULLPTR) || defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+    #define BOOST_NULLPTR NULL
 #else
-    #define JM_NULLPTR nullptr
+    #define BOOST_NULLPTR nullptr
+#endif
+
+#if defined(BOOST_NO_CXX11_ADDRESSOF) || defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+    #define BOOST_ADDRESSOF(x) &(x)
+#else
+    #define BOOST_ADDRESSOF(x) ::std::addressof(x)
 #endif
 
 namespace jm
@@ -49,7 +79,7 @@ namespace jm
 
     public:
         explicit BOOST_CONSTEXPR circular_buffer_iterator() BOOST_NOEXCEPT
-            : _buf(JM_NULLPTR)
+            : _buf(BOOST_NULLPTR)
             , _pos(0)
             , _left_in_forward(0)
         {}
@@ -101,7 +131,7 @@ namespace jm
 
         BOOST_CXX14_CONSTEXPR circular_buffer_iterator operator--(int) BOOST_NOEXCEPT
         {
-            auto temp = *this;
+            circular_buffer_iterator temp = *this;
             decrement();
             ++_left_in_forward;
             return temp;
@@ -158,31 +188,30 @@ namespace jm
             _buffer[idx].~T();
         }
 
-        template<typename... Args>
-        inline void construct(size_type idx, Args&&... args)
-        {
-            new (&_buffer[idx]) T(std::forward<Args>(args)...);
-        }
-
-        BOOST_CXX11_CONSTEXPR void copy_buffer(const T* buffer)
+        BOOST_CXX14_CONSTEXPR void copy_buffer(const T* buffer)
         {
             if (_size == N)
-                std::copy(buffer, buffer + N, ::std::addressof(_buffer[0]));
+                std::copy(buffer, buffer + N, BOOST_ADDRESSOF(_buffer[0]));
             else if (_head > _tail)
-                std::copy(buffer + _tail, buffer + _head + 1, ::std::addressof(_buffer[0]) + _tail);
+                std::copy(buffer + _tail, buffer + _head + 1, BOOST_ADDRESSOF(_buffer[0]) + _tail);
             else
-                std::copy(buffer + _head, buffer + _tail + 1, ::std::addressof(_buffer[0]) + _head);
+                std::copy(buffer + _head, buffer + _tail + 1, BOOST_ADDRESSOF(_buffer[0]) + _head);
         }
+
+
+#if !defined(BOOST_NO_RVALUE_REFERENCES) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         BOOST_CXX14_CONSTEXPR void move_buffer(T* buffer)
         {
             if (_size == N)
-                std::move(buffer, buffer + N, std::addressof(_buffer[0]));
+                std::move(buffer, buffer + N, BOOST_ADDRESSOF(_buffer[0]));
             else if (_head > _tail)
-                std::move(buffer + _tail, buffer + _head + 1, ::std::addressof(_buffer[0]) + _tail);
+                std::move(buffer + _tail, buffer + _head + 1, BOOST_ADDRESSOF(_buffer[0]) + _tail);
             else
-                std::move(buffer + _head, buffer + _tail + 1, ::std::addressof(_buffer[0]) + _head);
+                std::move(buffer + _head, buffer + _tail + 1, BOOST_ADDRESSOF(_buffer[0]) + _head);
         }
+
+#endif // !BOOST_NO_RVALUE_REFERENCES
     
     public:
         explicit circular_buffer()
@@ -197,7 +226,7 @@ namespace jm
             , _size(count)
         {
             if (count > N)
-                throw std::range_error("circular_buffer<T, N>(size_type count, const T&) count exceeded N");
+                throw std::out_of_range("circular_buffer<T, N>(size_type count, const T&) count exceeded N");
 
             std::fill(_buffer, _buffer + count, value);
         }
@@ -209,36 +238,32 @@ namespace jm
             , _size(_tail + 1)
         {
             if (_size > N)
-                throw std::range_error("circular_buffer<T, N>(InputIt first, InputIt last) distance exceeded N");
+                throw std::out_of_range("circular_buffer<T, N>(InputIt first, InputIt last) distance exceeded N");
 
-            std::copy(first, last, ::std::addressof(_buffer[0]));
+            std::copy(first, last, BOOST_ADDRESSOF(_buffer[0]));
         }
+
+#if !defined(BOOST_NO_INITIALIZER_LISTS) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+
+        circular_buffer(std::initializer_list<T> init)
+            : _size(init.size())
+            , _head(0)
+            , _tail(_size - 1)
+        {
+            if (_size > N)
+                throw std::out_of_range("circular_buffer<T, N>(std::initializer_list<T> init) init.size() > N");
+
+            std::move(init.begin(), init.end(), BOOST_ADDRESSOF(_buffer[0]));
+        }
+
+#endif // !BOOST_NO_INITIALIZER_LISTS
 
         circular_buffer(const circular_buffer& other)
             : _head(other._head)
             , _tail(other._tail)
             , _size(other._size)
         {
-            copy_buffer(::std::addressof(other._buffer[0]));
-        }
-
-        BOOST_CXX14_CONSTEXPR circular_buffer(circular_buffer&& other)
-            : _head(other._head)
-            , _tail(other._tail)
-            , _size(other._size)
-        {
-            move_buffer(::std::addressof(other._buffer[0]));
-        }
-
-        BOOST_CXX14_CONSTEXPR circular_buffer(std::initializer_list<T> init)
-            : _size(init.size())
-            , _head(0)
-            , _tail(_size - 1)
-        {
-            if (_size > N)
-                throw std::length_error("circular_buffer<T, N>(std::initializer_list<T> init) init.size() > N");
-
-            std::move(init.begin(), init.end(), ::std::addressof(_buffer[0]));
+            copy_buffer(BOOST_ADDRESSOF(other._buffer[0]));
         }
 
         BOOST_CXX14_CONSTEXPR circular_buffer& operator=(const circular_buffer& other)
@@ -247,9 +272,19 @@ namespace jm
             _tail = other._tail;
             _size = other._size;
 
-            copy_buffer(::std::addressof(other._buffer[0]));
+            copy_buffer(BOOST_ADDRESSOF(other._buffer[0]));
 
             return *this;
+        }
+
+#if !defined(BOOST_NO_RVALUE_REFERENCES) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+
+        circular_buffer(circular_buffer&& other)
+            : _head(other._head)
+            , _tail(other._tail)
+            , _size(other._size)
+        {
+            move_buffer(BOOST_ADDRESSOF(other._buffer[0]));
         }
 
         BOOST_CXX14_CONSTEXPR circular_buffer& operator=(circular_buffer&& other)
@@ -258,68 +293,70 @@ namespace jm
             _tail = other._tail;
             _size = other._size;
 
-            move_buffer(::std::addressof(other._buffer[0]));
+            move_buffer(BOOST_ADDRESSOF(other._buffer[0]));
 
             return *this;
         }
 
+#endif
+
     /// capacity
-        constexpr bool empty() const BOOST_NOEXCEPT
+        BOOST_CONSTEXPR bool empty() const BOOST_NOEXCEPT
         {
             return _size == 0;
         }
 
-        constexpr bool full() const BOOST_NOEXCEPT
+        BOOST_CONSTEXPR bool full() const BOOST_NOEXCEPT
         {
             return _size == N;
         }
         
-        constexpr size_type size() const BOOST_NOEXCEPT
+        BOOST_CONSTEXPR size_type size() const BOOST_NOEXCEPT
         {
             return _size;
         }
         
-        constexpr size_type max_size() const BOOST_NOEXCEPT
+        BOOST_CONSTEXPR size_type max_size() const BOOST_NOEXCEPT
         {
             return N; 
         }
        
     /// element access
-        constexpr reference front() BOOST_NOEXCEPT
+        BOOST_CONSTEXPR reference front() BOOST_NOEXCEPT
         {
             return _buffer[_head];
         }
         
-        constexpr const_reference front() const BOOST_NOEXCEPT
+        BOOST_CONSTEXPR const_reference front() const BOOST_NOEXCEPT
         {
             return _buffer[_head];
         }
         
-        constexpr reference back() BOOST_NOEXCEPT
+        BOOST_CONSTEXPR reference back() BOOST_NOEXCEPT
         {
             return _buffer[_tail];
         }
         
-        constexpr const_reference back() const BOOST_NOEXCEPT
+        BOOST_CONSTEXPR const_reference back() const BOOST_NOEXCEPT
         {
             return _buffer[_tail];
         }
 
-        constexpr T* data() BOOST_NOEXCEPT
+        BOOST_CONSTEXPR pointer data() BOOST_NOEXCEPT
         {
             return _buffer;
         }
 
-        constexpr const T* data() const BOOST_NOEXCEPT
+        BOOST_CONSTEXPR const_pointer data() const BOOST_NOEXCEPT
         {
-            return &_buffer;
+            return _buffer;
         }
         
     /// modifiers
         BOOST_CXX14_CONSTEXPR void push_back(const value_type& value)
         {
-            auto new_tail = increment(_tail);
-            if(_size == N) {
+            size_type new_tail = increment(_tail);
+            if(JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
                 _head = increment(_head);
                 --_size;
             }
@@ -327,53 +364,59 @@ namespace jm
             _tail = new_tail;
             ++_size;
         }
-        
-        BOOST_CXX14_CONSTEXPR void push_back(value_type&& value)
-        {
-            auto new_tail = increment(_tail);
-            if(_size == N) {
-                _head = increment(_head);
-                --_size;
-            }
-            _buffer[new_tail] = value; 
-            _tail = new_tail;
-            ++_size;
-        }
-        
+
         BOOST_CXX14_CONSTEXPR void push_front(const value_type& value)
         {
-            auto new_head = decrement(_head);
-            if(_size == N) {
+            size_type new_head = decrement(_head);
+            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
                 _tail = decrement(_tail);
                 --_size;
             }
-            _buffer[new_head] = value; 
+            _buffer[new_head] = value;
             _head = new_head;
             ++_size;
         }
-        
+
+#if !defined(BOOST_NO_RVALUE_REFERENCES) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+
+        BOOST_CXX14_CONSTEXPR void push_back(value_type&& value)
+        {
+            size_type new_tail = increment(_tail);
+            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
+                _head = increment(_head);
+                --_size;
+            }
+            _buffer[new_tail] = value;
+            _tail = new_tail;
+            ++_size;
+        }
+
         BOOST_CXX14_CONSTEXPR void push_front(value_type&& value)
         {
-            auto new_head = decrement(_head);
-            if(_size == N) {
+            size_type new_head = decrement(_head);
+            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
                 _tail = decrement(_tail);
                 --_size;
             }
-            _buffer[new_head] = std::move(value); 
+            _buffer[new_head] = std::move(value);
             _head = new_head;
             ++_size;
         }
-        
+
+#endif // !BOOST_NO_RVALUE_REFERENCES
+
+#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+
         template<typename... Args>
         void emplace_back(Args&&... args)
         {
-            auto new_tail = increment(_tail);
-            if (_size == N) {
+            size_type new_tail = increment(_tail);
+            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
                 _head = increment(_head);
                 --_size;
                 destroy(new_tail);
             }
-            construct(new_tail, std::forward<Args>(args)...);
+            new (&_buffer[new_tail]) value_type(std::forward<Args>(args)...);
             _tail = new_tail;
             ++_size;
         }
@@ -381,29 +424,31 @@ namespace jm
         template<typename... Args>
         void emplace_front(Args&&... args)
         {
-            auto new_head = decrement(_head);
-            if (_size == N) {
+            size_type new_head = decrement(_head);
+            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
                 _tail = decrement(_tail);
                 --_size;
                 destroy(new_head)
             }
-            construct(new_head, std::forward<Args>(args)...);
+            new (&_buffer[new_head]) value_type(std::forward<Args>(args)...);
             _head = new_head;
             ++_size;
         }
+
+#endif
         
         BOOST_CXX14_CONSTEXPR void pop_back() BOOST_NOEXCEPT
         {
-            auto old_tail = _tail;
+            size_type old_tail = _tail;
             _tail = decrement(_tail);
-            _buffer[old_tail].~value_type();
+            destroy(old_tail);
         }
         
         BOOST_CXX14_CONSTEXPR void pop_front() BOOST_NOEXCEPT
         {
-            auto old_head = _head;
+            size_type old_head = _head;
             _head = decrement(_head);
-            _buffer[old_head].~value_type();
+            destroy(old_head);
         }
 
         BOOST_CXX14_CONSTEXPR void clear() BOOST_NOEXCEPT
@@ -416,76 +461,76 @@ namespace jm
         }
 
     /// iterators
-        iterator begin() BOOST_NOEXCEPT
+        BOOST_CXX14_CONSTEXPR iterator begin() BOOST_NOEXCEPT
         {
             if (_size == 0)
                 return end();
             return iterator(_buffer, _head, _size);
         }
 
-        const_iterator begin() const BOOST_NOEXCEPT
+        BOOST_CXX14_CONSTEXPR const_iterator begin() const BOOST_NOEXCEPT
         {
             if (_size == 0)
                 return end();
             return const_iterator(_buffer, _head, _size);
         }
 
-        const_iterator cbegin() const BOOST_NOEXCEPT
+        BOOST_CXX14_CONSTEXPR const_iterator cbegin() const BOOST_NOEXCEPT
         {
             if (_size == 0)
                 return cend();
             return const_iterator(_buffer, _head, _size);
         }
 
-        reverse_iterator rbegin() BOOST_NOEXCEPT
+        BOOST_CXX14_CONSTEXPR reverse_iterator rbegin() BOOST_NOEXCEPT
         {
             if (_size == 0)
                 return rend();
-            return reverse_iterator(iterator{ _buffer, _head, _size });
+            return reverse_iterator(iterator(_buffer, _head, _size));
         }
 
-        const_reverse_iterator  rbegin() const BOOST_NOEXCEPT
+        BOOST_CXX14_CONSTEXPR const_reverse_iterator  rbegin() const BOOST_NOEXCEPT
         {
             if (_size == 0)
                 return rend();
-            return const_reverse_iterator(const_iterator{ _buffer, _head, _size });
+            return const_reverse_iterator(const_iterator(_buffer, _head, _size));
         }
 
-        const_reverse_iterator  crbegin() const BOOST_NOEXCEPT
+        BOOST_CXX14_CONSTEXPR const_reverse_iterator  crbegin() const BOOST_NOEXCEPT
         {
             if (_size == 0)
                 return crend();
-            return const_reverse_iterator(const_iterator{ _buffer, _head, _size});
+            return const_reverse_iterator(const_iterator(_buffer, _head, _size));
         }
 
-        iterator end() BOOST_NOEXCEPT
+        BOOST_CXX14_CONSTEXPR iterator end() BOOST_NOEXCEPT
         {
             return iterator(_buffer, increment(_tail), 0);
         }
 
-        const_iterator end() const BOOST_NOEXCEPT
+        BOOST_CXX14_CONSTEXPR const_iterator end() const BOOST_NOEXCEPT
         {
             return const_iterator(_buffer, increment(_tail), 0);
         }
 
-        const_iterator cend() const BOOST_NOEXCEPT
+        BOOST_CXX14_CONSTEXPR const_iterator cend() const BOOST_NOEXCEPT
         {
             return const_iterator(_buffer, increment(_tail), 0);
         }
 
-        reverse_iterator rend() BOOST_NOEXCEPT
+        BOOST_CXX14_CONSTEXPR reverse_iterator rend() BOOST_NOEXCEPT
         {
-            return reverse_iterator(iterator{ _buffer, increment(_tail), 0 });
+            return reverse_iterator(iterator( _buffer, increment(_tail), 0 ));
         }
 
-        const_reverse_iterator rend() const BOOST_NOEXCEPT
+        BOOST_CXX14_CONSTEXPR const_reverse_iterator rend() const BOOST_NOEXCEPT
         {
-            return const_reverse_iterator(const_iterator{ _buffer, increment(_tail), 0 });
+            return const_reverse_iterator(const_iterator(_buffer, increment(_tail), 0));
         }
 
-        const_reverse_iterator crend() const BOOST_NOEXCEPT
+        BOOST_CXX14_CONSTEXPR const_reverse_iterator crend() const BOOST_NOEXCEPT
         {
-            return const_reverse_iterator(const_iterator{ _buffer, increment(_tail), 0 });
+            return const_reverse_iterator(const_iterator(_buffer, increment(_tail), 0));
         }
     };
 

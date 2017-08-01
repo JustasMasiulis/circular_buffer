@@ -2,7 +2,6 @@
 #include <circular_buffer.hpp>
 #include "../Catch/include/catch.hpp"
 
-#include <algorithm>
 #include <numeric>
 #include <vector>
 
@@ -26,6 +25,7 @@ jm::circular_buffer<int, 16> gen_filled_cb(int size = 16)
 
     return cb;
 }
+
 
 TEST_CASE("default construction")
 {
