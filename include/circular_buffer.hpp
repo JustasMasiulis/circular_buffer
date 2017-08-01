@@ -317,12 +317,11 @@ namespace jm
             if (BOOST_UNLIKELY(first == last))
                 _head = 1;
             else {
-                storage_type* buf_ptr = _buffer;
-                for (; first != last; ++first, ++buf_ptr, ++_size) {
-                    if (_size > N)
+                for (; first != last; ++first, ++_size) {
+                    if (BOOST_UNLIKELY(_size >= N))
                         throw std::out_of_range("circular_buffer<T, N>(InputIt first, InputIt last) distance exceeded N");
 
-                    *buf_ptr = storage_type(*first);
+                    _buffer[_size] = storage_type(*first);
                 }
 
                 _tail = _size - 1;

@@ -1,4 +1,5 @@
 #define CATCH_CONFIG_MAIN
+#define JM_CIRCULAR_BUFFER_CXX14
 #include <circular_buffer.hpp>
 #include "../Catch/include/catch.hpp"
 
@@ -109,6 +110,31 @@ TEST_CASE("initializer_list construction")
     jm::circular_buffer<int, 4> buf{ { 1, 2, 3, 5 } };
 }
 
+TEST_CASE("iterators construction")
+{
+    {
+        auto cb = gen_filled_cb(15);
+        REQUIRE_THROWS(void(jm::circular_buffer<int, 4>{ cb.begin(), cb.end()}));
+
+        jm::circular_buffer<int, 16> cb2(cb.begin(), cb.end());
+
+        REQUIRE(std::equal(cb.begin(), cb.end(), cb2.begin()));
+        REQUIRE(cb.size() == cb2.size());
+    }
+
+    jm::circular_buffer<int, 4> buf1{ 1, 2, 3, 4 };
+    jm::circular_buffer<int, 4> buf2{ buf1.begin(), buf1.end() };
+
+    for (auto v : buf1)
+        std::cout << v;
+
+    for (auto v : buf2)
+        std::cout << v;
+
+    REQUIRE(std::equal(buf1.begin(), buf1.end(), buf2.begin()));
+    REQUIRE(buf1.size() == buf2.size());
+}
+
 TEST_CASE("push_back")
 {
     jm::circular_buffer<int, 16> cb;
@@ -131,6 +157,37 @@ TEST_CASE("push_front")
 
     for (auto i : inc_vec) {
         cb.push_front(i);
+        REQUIRE(cb.front() == i);
+        REQUIRE(*cb.begin() == i);
+        for (auto v : cb)
+            REQUIRE(v == i--);
+    }
+
+    REQUIRE(cb.size() == cb.max_size());
+}
+
+TEST_CASE("emplace_back")
+{
+    jm::circular_buffer<int, 16> cb;
+
+    for (auto i : inc_vec) {
+        cb.emplace_back(i);
+        REQUIRE(cb.back() == i);
+        REQUIRE(*--cb.end() == i);
+        auto front = cb.front();
+        for (auto v : cb)
+            REQUIRE(v == front++);
+    }
+
+    REQUIRE(cb.size() == cb.max_size());
+}
+
+TEST_CASE("emplace_front")
+{
+    jm::circular_buffer<int, 16> cb;
+
+    for (auto i : inc_vec) {
+        cb.emplace_front(i);
         REQUIRE(cb.front() == i);
         REQUIRE(*cb.begin() == i);
         for (auto v : cb)
