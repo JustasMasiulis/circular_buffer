@@ -98,10 +98,6 @@ namespace jm
             empty_t _empty;
             T       _value;
 
-#if !defined(BOOST_NO_STATIC_ASSERT) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-            static_assert(std::is_trivially_destructible<T>::value, "");
-#endif
-
             BOOST_CONSTEXPR cb_storage() BOOST_NOEXCEPT
                 : _empty()
             {}
@@ -118,7 +114,11 @@ namespace jm
 
 #endif
 
+#if !defined(BOOST_NO_CXX11_DEFAULTED_FUNCTIONS) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+
             ~cb_storage() = default;
+
+#endif
         };
 
     }
