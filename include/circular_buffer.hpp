@@ -17,36 +17,54 @@
 #ifndef JM_CIRCULAR_BUFFER_HPP
 #define JM_CIRCULAR_BUFFER_HPP
 
-#ifndef JM_CIRCULAR_BUFFER_NO_BOOST
-#include <boost/config.hpp>
-#endif // !JM_CIRCULAR_BUFFER_NO_BOOST
-
 #include <iterator>
 #include <algorithm>
 #include <stdexcept>
 
-#if !defined(BOOST_NO_INITIALIZER_LISTS) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 #include <initializer_list>
-#endif // !BOOST_NO_INITIALIZER_LISTS
+#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-#ifdef JM_CIRCULAR_BUFFER_NO_BOOST // defaults to c++11 features
-    #define BOOST_LIKELY(expr) expr
-    #define BOOST_UNLIKELY(expr) expr
 
-    #ifndef JM_CIRCULAR_BUFFER_CXX_OLD
-        #define BOOST_CONSTEXPR constexpr
-        #define BOOST_NOEXCEPT noexcept
-    #else
-        #define BOOST_CONSTEXPR
-        #define BOOST_NOEXCEPT
-    #endif
+#ifndef JM_CIRCULAR_BUFFER_CXX_OLD
+    #define BOOST_CONSTEXPR constexpr
+    #define BOOST_NOEXCEPT noexcept
+    #define BOOST_NULLPTR nullptr
+    #define BOOST_ADDRESSOF(x) ::std::addressof(x)
+#else
+    #define BOOST_CONSTEXPR
+    #define BOOST_NOEXCEPT
+    #define BOOST_NULLPTR NULL
+    #define BOOST_ADDRESSOF(x) &(x)
+#endif
 
-    #ifdef JM_CIRCULAR_BUFFER_CXX14
-        #define BOOST_CXX14_CONSTEXPR constexpr
-    #else
-        #define BOOST_CXX14_CONSTEXPR
+#ifdef JM_CIRCULAR_BUFFER_CXX14
+    #define BOOST_CXX14_CONSTEXPR constexpr
+#else
+    #define BOOST_CXX14_CONSTEXPR
+#endif
+
+
+#if defined(__GNUC__)
+    #define BOOST_LIKELY(x) __builtin_expect(x, 1)
+    #define BOOST_UNLIKELY(x) __builtin_expect(x, 0)
+#elif defined(__clang__) && !defined(__c2__) && defined(__has_builtin)
+    #if __has_builtin(__builtin_expect)
+        #define BOOST_LIKELY(x) __builtin_expect(x, 1)
+        #define BOOST_UNLIKELY(x) __builtin_expect(x, 0)
     #endif
 #endif
+
+
+#ifndef BOOST_LIKELY
+    #define BOOST_LIKELY(expr) (expr)
+#endif // !BOOST_LIKELY
+
+
+#ifndef BOOST_UNLIKELY
+    #define BOOST_UNLIKELY(expr) (expr)
+#endif // !BOOST_LIKELY
+
 
 #if defined(CIRCULAR_BUFFER_LIKELY_FULL) // optimization if you know if the buffer will likely be full or not
     #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) BOOST_LIKELY(expr)
@@ -56,17 +74,6 @@
     #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) expr
 #endif
 
-#if defined(BOOST_NO_NULLPTR) || defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-    #define BOOST_NULLPTR NULL
-#else
-    #define BOOST_NULLPTR nullptr
-#endif
-
-#if defined(BOOST_NO_CXX11_ADDRESSOF) || defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-    #define BOOST_ADDRESSOF(x) &(x)
-#else
-    #define BOOST_ADDRESSOF(x) ::std::addressof(x)
-#endif
 
 namespace jm
 {
@@ -155,7 +162,7 @@ namespace jm
         {}
 
         template<typename TSnc, typename Tnc>
-        explicit BOOST_CONSTEXPR circular_buffer_iterator(const circular_buffer_iterator<TSnc, Tnc, N>& lhs)
+        explicit BOOST_CONSTEXPR circular_buffer_iterator(const circular_buffer_iterator<TSnc, Tnc, N>& lhs) BOOST_NOEXCEPT
             : _buf(lhs._buf)
             , _pos(lhs._pos)
             , _left_in_forward(lhs._left_in_forward)
@@ -254,7 +261,7 @@ namespace jm
 
         BOOST_CXX14_CONSTEXPR void copy_buffer(const storage_type* buffer)
         {
-            if (_size == N)
+            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N))
                 copy_range(buffer, 0, N);
             else if (_head > _tail)
                 copy_range(buffer, _tail, _head + 1);
@@ -263,7 +270,7 @@ namespace jm
         }
 
 
-#if !defined(BOOST_NO_RVALUE_REFERENCES) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         BOOST_CXX14_CONSTEXPR inline void move_range(storage_type* buffer
                                                      , size_type first, size_type last)
@@ -274,7 +281,7 @@ namespace jm
 
         BOOST_CXX14_CONSTEXPR void move_buffer(storage_type* buffer)
         {
-            if (_size == N)
+            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N))
                 move_range(buffer, 0, N);
             else if (_head > _tail)
                 move_range(buffer, _tail, _head + 1);
@@ -282,7 +289,7 @@ namespace jm
                 move_range(buffer, _head, _tail + 1);
         }
 
-#endif // !BOOST_NO_RVALUE_REFERENCES
+#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
     
     public:
         BOOST_CONSTEXPR explicit circular_buffer()
@@ -300,7 +307,8 @@ namespace jm
         {
             if (BOOST_UNLIKELY(_size > N))
                 throw std::out_of_range("circular_buffer<T, N>(size_type count, const T&) count exceeded N");
-            else if (BOOST_LIKELY(_size != 0))
+
+            if (BOOST_LIKELY(_size != 0))
                 for (size_type i = 0; i < count; ++i)
                     _buffer[i] = storage_type(value);
             else
@@ -314,9 +322,7 @@ namespace jm
             , _size(0)
             , _buffer()
         {
-            if (BOOST_UNLIKELY(first == last))
-                _head = 1;
-            else {
+            if (first != last) {
                 for (; first != last; ++first, ++_size) {
                     if (BOOST_UNLIKELY(_size >= N))
                         throw std::out_of_range("circular_buffer<T, N>(InputIt first, InputIt last) distance exceeded N");
@@ -326,9 +332,11 @@ namespace jm
 
                 _tail = _size - 1;
             }
+            else
+                _head = 1;
         }
 
-#if !defined(BOOST_NO_INITIALIZER_LISTS) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         BOOST_CXX14_CONSTEXPR circular_buffer(std::initializer_list<T> init)
             : _head(0)
@@ -338,7 +346,8 @@ namespace jm
         {
             if (BOOST_UNLIKELY(_size > N))
                 throw std::out_of_range("circular_buffer<T, N>(std::initializer_list<T> init) init.size() > N");
-            else if (BOOST_UNLIKELY(_size == 0))
+
+            if (BOOST_UNLIKELY(_size == 0))
                 _head = 1;
 
             storage_type* buf_ptr = _buffer;
@@ -346,7 +355,7 @@ namespace jm
                 *buf_ptr = std::move(storage_type(std::move(*it)));
         }
 
-#endif // !BOOST_NO_INITIALIZER_LISTS
+#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         BOOST_CXX14_CONSTEXPR circular_buffer(const circular_buffer& other)
             : _head(other._head)
@@ -368,7 +377,7 @@ namespace jm
             return *this;
         }
 
-#if !defined(BOOST_NO_RVALUE_REFERENCES) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         BOOST_CXX14_CONSTEXPR circular_buffer(circular_buffer&& other)
             : _head(other._head)
@@ -390,7 +399,7 @@ namespace jm
             return *this;
         }
 
-#endif
+#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
     /// capacity
         BOOST_CONSTEXPR bool empty() const BOOST_NOEXCEPT
@@ -469,7 +478,7 @@ namespace jm
             ++_size;
         }
 
-#if !defined(BOOST_NO_RVALUE_REFERENCES) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         BOOST_CXX14_CONSTEXPR void push_back(value_type&& value)
         {
@@ -495,9 +504,6 @@ namespace jm
             ++_size;
         }
 
-#endif // !BOOST_NO_RVALUE_REFERENCES
-
-#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         template<typename... Args>
         void emplace_back(Args&&... args)
@@ -527,7 +533,7 @@ namespace jm
             ++_size;
         }
 
-#endif
+#endif// !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
         
         BOOST_CXX14_CONSTEXPR void pop_back() BOOST_NOEXCEPT
         {
