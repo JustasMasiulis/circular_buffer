@@ -135,6 +135,33 @@ TEST_CASE("iterators construction")
     REQUIRE(buf1.size() == buf2.size());
 }
 
+TEST_CASE("clear, empty, full")
+{
+    {
+        auto cb = gen_filled_cb(12);
+        REQUIRE(cb.size() == 12);
+        REQUIRE(!cb.empty());
+        REQUIRE(!cb.full());
+        cb.clear();
+        REQUIRE(cb.empty());
+        REQUIRE(!cb.full());
+        REQUIRE(cb.size() == 0);
+    }
+
+    {
+        auto cb = gen_filled_cb(16);
+        REQUIRE(cb.size() == 16);
+        REQUIRE(cb.size() == cb.max_size());
+
+        REQUIRE(!cb.empty());
+        REQUIRE(cb.full());
+        cb.clear();
+        REQUIRE(cb.empty());
+        REQUIRE(!cb.full());
+        REQUIRE(cb.size() == 0);
+    }
+}
+
 TEST_CASE("push_back")
 {
     jm::circular_buffer<int, 16> cb;

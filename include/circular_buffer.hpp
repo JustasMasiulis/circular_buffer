@@ -66,9 +66,9 @@
 #endif // !BOOST_LIKELY
 
 
-#if defined(CIRCULAR_BUFFER_LIKELY_FULL) // optimization if you know if the buffer will likely be full or not
+#if defined(JM_CIRCULAR_BUFFER_LIKELY_FULL) // optimization if you know if the buffer will likely be full or not
     #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) BOOST_LIKELY(expr)
-#elif defined(CIRCULAR_BUFFER_UNLIKELY_FULL)
+#elif defined(JM_CIRCULAR_BUFFER_UNLIKELY_FULL)
     #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) BOOST_UNLIKELY(expr)
 #else
     #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) expr
@@ -539,6 +539,7 @@ namespace jm
         {
             size_type old_tail = _tail;
             _tail = wrapper_t::decrement(_tail);
+            --_size;
             destroy(old_tail);
         }
         
@@ -546,6 +547,7 @@ namespace jm
         {
             size_type old_head = _head;
             _head = wrapper_t::decrement(_head);
+            --_size;
             destroy(old_head);
         }
 
