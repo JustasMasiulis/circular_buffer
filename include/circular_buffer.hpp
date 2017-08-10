@@ -96,94 +96,32 @@ namespace jm
         };
 
 
-        struct empty_t{};
-
-
         template<typename T>
         union optional_storage 
         {
+            struct empty_t {};
+
             empty_t _empty;
             T       _value;
 
-            BOOST_CONSTEXPR optional_storage() BOOST_NOEXCEPT
+            inline BOOST_CONSTEXPR optional_storage() BOOST_NOEXCEPT
                 : _empty()
             {}
 
-            BOOST_CONSTEXPR optional_storage(const T& value) BOOST_NOEXCEPT
+            inline BOOST_CONSTEXPR optional_storage(const T& value) BOOST_NOEXCEPT
                 : _value(value)
             {}
 
-#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-            BOOST_CONSTEXPR optional_storage(T&& value) BOOST_NOEXCEPT
+            inline BOOST_CONSTEXPR optional_storage(T&& value) BOOST_NOEXCEPT
                 : _value(std::move(value))
             {}
-
-#endif
-
-#if !defined(BOOST_NO_CXX11_DEFAULTED_FUNCTIONS) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
             ~optional_storage() = default;
 
 #endif
         };
-
-#if defined(JM_CIRCULAR_BUFFER_CXX_OLD) || defined(JM_CIRCULAR_BUFFER_SPEED_OVER_CONSTEXPR)
-
-        template<typename T, std::size_t N>
-        struct cb_storage
-        {
-            T _buffer[N];
-
-            const T& at(std::size_t idx) const
-            {
-                return _buffer[idx];
-            }
-
-            T& at(std::size_t idx)
-            {
-                return _buffer[idx];
-            }
-        };
-
-#elif defined(JM_CIRCULAR_BUFFER_CXX14)
-
-        template<typename T, std::size_t N>
-        struct cb_storage
-        {
-            optional_storage<T> _buffer[N];
-
-            inline constexpr const T& at(std::size_t idx) const noexcept
-            {
-                return _buffer[idx]._value;
-            }
-
-            inline constexpr T& at(std::size_t idx) noexcept
-            {
-                return _buffer[idx]._value;
-            }
-        };
-
-#else
-
-        template<typename T, std::size_t N>
-        struct cb_storage
-        {
-            optional_storage<T[N]> _buffer;
-
-            inline constexpr const T& at(std::size_t idx) const noexcept
-            {
-                return _buffer._value[idx];
-            }
-
-            inline constexpr T& at(std::size_t idx) noexcept
-            {
-                return _buffer._value[idx];
-            }
-        };
-
-#endif
-
 
     }
 
@@ -309,14 +247,14 @@ namespace jm
             _buffer[idx]._value.~T();
         }
 
-        BOOST_CXX14_CONSTEXPR inline void copy_range(const storage_type* buffer
+        inline BOOST_CXX14_CONSTEXPR void copy_range(const storage_type* buffer
                                                      , size_type first, size_type last)
         {
             for (size_type i = first; i < last; ++i)
                 _buffer[i]._value = (buffer + i)->_value;
         }
 
-        BOOST_CXX14_CONSTEXPR void copy_buffer(const storage_type* buffer)
+        inline BOOST_CXX14_CONSTEXPR void copy_buffer(const storage_type* buffer)
         {
             if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N))
                 copy_range(buffer, 0, N);
@@ -329,14 +267,14 @@ namespace jm
 
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-        BOOST_CXX14_CONSTEXPR inline void move_range(storage_type* buffer
+        inline BOOST_CXX14_CONSTEXPR void move_range(storage_type* buffer
                                                      , size_type first, size_type last)
         {
             for (size_type i = first; i < last; ++i)
                 _buffer[i]._value = std::move((buffer + i)->_value);
         }
 
-        BOOST_CXX14_CONSTEXPR void move_buffer(storage_type* buffer)
+        inline BOOST_CXX14_CONSTEXPR void move_buffer(storage_type* buffer)
         {
             if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N))
                 move_range(buffer, 0, N);
