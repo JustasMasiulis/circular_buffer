@@ -135,6 +135,16 @@ TEST_CASE("iterators construction")
     REQUIRE(buf1.size() == buf2.size());
 }
 
+TEST_CASE("n items construction")
+{
+    constexpr float float_val = 2.f;
+    jm::circular_buffer<float, 5> cb(4, float_val);
+    for (auto item : cb)
+        REQUIRE(item == float_val);
+
+    REQUIRE(cb.size() == 4);
+}
+
 TEST_CASE("clear, empty, full")
 {
     {

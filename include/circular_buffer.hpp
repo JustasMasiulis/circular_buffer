@@ -100,22 +100,22 @@ namespace jm
 
 
         template<typename T>
-        union cb_storage 
+        union optional_storage 
         {
             empty_t _empty;
             T       _value;
 
-            BOOST_CONSTEXPR cb_storage() BOOST_NOEXCEPT
+            BOOST_CONSTEXPR optional_storage() BOOST_NOEXCEPT
                 : _empty()
             {}
 
-            BOOST_CONSTEXPR cb_storage(const T& value) BOOST_NOEXCEPT
+            BOOST_CONSTEXPR optional_storage(const T& value) BOOST_NOEXCEPT
                 : _value(value)
             {}
 
 #if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-            BOOST_CONSTEXPR cb_storage(T&& value) BOOST_NOEXCEPT
+            BOOST_CONSTEXPR optional_storage(T&& value) BOOST_NOEXCEPT
                 : _value(std::move(value))
             {}
 
@@ -123,10 +123,67 @@ namespace jm
 
 #if !defined(BOOST_NO_CXX11_DEFAULTED_FUNCTIONS) && !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-            ~cb_storage() = default;
+            ~optional_storage() = default;
 
 #endif
         };
+
+#if defined(JM_CIRCULAR_BUFFER_CXX_OLD) || defined(JM_CIRCULAR_BUFFER_SPEED_OVER_CONSTEXPR)
+
+        template<typename T, std::size_t N>
+        struct cb_storage
+        {
+            T _buffer[N];
+
+            const T& at(std::size_t idx) const
+            {
+                return _buffer[idx];
+            }
+
+            T& at(std::size_t idx)
+            {
+                return _buffer[idx];
+            }
+        };
+
+#elif defined(JM_CIRCULAR_BUFFER_CXX14)
+
+        template<typename T, std::size_t N>
+        struct cb_storage
+        {
+            optional_storage<T> _buffer[N];
+
+            inline constexpr const T& at(std::size_t idx) const noexcept
+            {
+                return _buffer[idx]._value;
+            }
+
+            inline constexpr T& at(std::size_t idx) noexcept
+            {
+                return _buffer[idx]._value;
+            }
+        };
+
+#else
+
+        template<typename T, std::size_t N>
+        struct cb_storage
+        {
+            optional_storage<T[N]> _buffer;
+
+            inline constexpr const T& at(std::size_t idx) const noexcept
+            {
+                return _buffer._value[idx];
+            }
+
+            inline constexpr T& at(std::size_t idx) noexcept
+            {
+                return _buffer._value[idx];
+            }
+        };
+
+#endif
+
 
     }
 
@@ -233,14 +290,14 @@ namespace jm
         typedef const T&                                                 const_reference;
         typedef T*                                                       pointer;
         typedef const T*                                                 const_pointer;
-        typedef circular_buffer_iterator<detail::cb_storage<T>, T, N>       iterator;
-        typedef circular_buffer_iterator<const detail::cb_storage<T>, const T, N> const_iterator;
+        typedef circular_buffer_iterator<detail::optional_storage<T>, T, N>       iterator;
+        typedef circular_buffer_iterator<const detail::optional_storage<T>, const T, N> const_iterator;
         typedef std::reverse_iterator<iterator>                          reverse_iterator;
         typedef std::reverse_iterator<const_iterator>                    const_reverse_iterator;
         
     private:
         typedef detail::cb_index_wrapper<size_type, N>                   wrapper_t;
-        typedef detail::cb_storage<T>                                    storage_type;
+        typedef detail::optional_storage<T>                                    storage_type;
 
         size_type    _head;
         size_type    _tail;
@@ -299,7 +356,9 @@ namespace jm
             , _buffer()
         {}
 
-        BOOST_CXX14_CONSTEXPR explicit circular_buffer(size_type count, const T& value = T())
+#if defined(JM_CIRCULAR_BUFFER_CXX14)
+
+        constexpr circular_buffer(size_type count, const T& value)
             : _head(0)
             , _tail(count - 1)
             , _size(count)
@@ -314,6 +373,26 @@ namespace jm
             else
                 _head = 1;
         }
+
+#else
+
+        explicit circular_buffer(size_type count, const T& value = T())
+            : _head(0)
+            , _tail(count - 1)
+            , _size(count)
+            , _buffer()
+        {
+            if (BOOST_UNLIKELY(_size > N))
+                throw std::out_of_range("circular_buffer<T, N>(size_type count, const T&) count exceeded N");
+
+            if (BOOST_LIKELY(_size != 0))
+                for (size_type i = 0; i < count; ++i)
+                    _buffer[i] = storage_type(value);
+            else
+                _head = 1;
+        }
+
+#endif
 
         template<typename InputIt>
         BOOST_CXX14_CONSTEXPR circular_buffer(InputIt first, InputIt last)
@@ -456,11 +535,15 @@ namespace jm
     /// modifiers
         BOOST_CXX14_CONSTEXPR void push_back(const value_type& value)
         {
-            size_type new_tail = wrapper_t::increment(_tail);
+            size_type new_tail;
             if(JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
+                new_tail = _head;
                 _head = wrapper_t::increment(_head);
                 --_size;
             }
+            else
+                new_tail = wrapper_t::increment(_tail);
+
             _buffer[new_tail]._value = value; 
             _tail = new_tail;
             ++_size;
@@ -468,11 +551,15 @@ namespace jm
 
         BOOST_CXX14_CONSTEXPR void push_front(const value_type& value)
         {
-            size_type new_head = wrapper_t::decrement(_head);
+            size_type new_head;
             if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
+                new_head = _tail;
                 _tail = wrapper_t::decrement(_tail);
                 --_size;
             }
+            else
+                new_head = wrapper_t::decrement(_head);
+
             _buffer[new_head]._value = value;
             _head = new_head;
             ++_size;
@@ -482,11 +569,15 @@ namespace jm
 
         BOOST_CXX14_CONSTEXPR void push_back(value_type&& value)
         {
-            size_type new_tail = wrapper_t::increment(_tail);
+            size_type new_tail;
             if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
+                new_tail = _head;
                 _head = wrapper_t::increment(_head);
                 --_size;
             }
+            else
+                new_tail = wrapper_t::increment(_tail);
+
             _buffer[new_tail]._value = std::move(value);
             _tail = new_tail;
             ++_size;
@@ -494,11 +585,15 @@ namespace jm
 
         BOOST_CXX14_CONSTEXPR void push_front(value_type&& value)
         {
-            size_type new_head = wrapper_t::decrement(_head);
+            size_type new_head;
             if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
+                new_head = _tail;
                 _tail = wrapper_t::decrement(_tail);
                 --_size;
             }
+            else
+                new_head = wrapper_t::decrement(_head);
+
             _buffer[new_head]._value = std::move(value);
             _head = new_head;
             ++_size;
@@ -508,12 +603,16 @@ namespace jm
         template<typename... Args>
         void emplace_back(Args&&... args)
         {
-            size_type new_tail = wrapper_t::increment(_tail);
+            size_type new_tail; 
             if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
+                new_tail = _head;
                 _head = wrapper_t::increment(_head);
                 --_size;
                 destroy(new_tail);
             }
+            else
+                new_tail = wrapper_t::increment(_tail);
+
             new (BOOST_ADDRESSOF(_buffer[new_tail]._value)) value_type(std::forward<Args>(args)...);
             _tail = new_tail;
             ++_size;
@@ -522,12 +621,16 @@ namespace jm
         template<typename... Args>
         void emplace_front(Args&&... args)
         {
-            size_type new_head = wrapper_t::decrement(_head);
+            size_type new_head;
             if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
+                new_head = _tail;
                 _tail = wrapper_t::decrement(_tail);
                 --_size;
                 destroy(new_head);
             }
+            else
+                new_head = wrapper_t::decrement(_head);
+
             new (BOOST_ADDRESSOF(_buffer[new_head]._value)) value_type(std::forward<Args>(args)...);
             _head = new_head;
             ++_size;
