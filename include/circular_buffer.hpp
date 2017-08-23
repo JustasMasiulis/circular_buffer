@@ -46,42 +46,39 @@
     #define JM_CB_CXX14_INIT_0
 #endif
 
-
 #if defined(__GNUC__)
-    #define BOOST_LIKELY(x) __builtin_expect(x, 1)
-    #define BOOST_UNLIKELY(x) __builtin_expect(x, 0)
+    #define JM_CB_LIKELY(x) __builtin_expect(x, 1)
+    #define JM_CB_UNLIKELY(x) __builtin_expect(x, 0)
 #elif defined(__clang__) && !defined(__c2__) && defined(__has_builtin)
     #if __has_builtin(__builtin_expect)
-        #define BOOST_LIKELY(x) __builtin_expect(x, 1)
-        #define BOOST_UNLIKELY(x) __builtin_expect(x, 0)
+        #define JM_CB_LIKELY(x) __builtin_expect(x, 1)
+        #define JM_CB_UNLIKELY(x) __builtin_expect(x, 0)
     #endif
 #endif
 
 
-#ifndef BOOST_LIKELY
-    #define BOOST_LIKELY(expr) (expr)
-#endif // !BOOST_LIKELY
+#ifndef JM_CB_LIKELY
+    #define JM_CB_LIKELY(expr) (expr)
+#endif // !JM_CB_LIKELY
 
 
-#ifndef BOOST_UNLIKELY
-    #define BOOST_UNLIKELY(expr) (expr)
-#endif // !BOOST_LIKELY
+#ifndef JM_CB_UNLIKELY
+    #define JM_CB_UNLIKELY(expr) (expr)
+#endif // !JM_CB_LIKELY
 
 
 #if defined(JM_CIRCULAR_BUFFER_LIKELY_FULL) // optimization if you know if the buffer will likely be full or not
-    #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) BOOST_LIKELY(expr)
+    #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) JM_CB_LIKELY(expr)
 #elif defined(JM_CIRCULAR_BUFFER_UNLIKELY_FULL)
-    #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) BOOST_UNLIKELY(expr)
+    #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) JM_CB_UNLIKELY(expr)
 #else
     #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) expr
 #endif
 
 
-namespace jm
-{
+namespace jm {
 
-    namespace detail
-    {
+    namespace detail {
 
         template<typename size_type, size_type N>
         struct cb_index_wrapper
@@ -223,21 +220,21 @@ namespace jm
     class circular_buffer
     {
     public: 
-        typedef T                                                        value_type;
-        typedef std::size_t                                              size_type;
-        typedef std::ptrdiff_t                                           difference_type;
-        typedef T&                                                       reference;
-        typedef const T&                                                 const_reference;
-        typedef T*                                                       pointer;
-        typedef const T*                                                 const_pointer;
-        typedef circular_buffer_iterator<detail::optional_storage<T>, T, N>       iterator;
+        typedef T                                                                       value_type;
+        typedef std::size_t                                                             size_type;
+        typedef std::ptrdiff_t                                                          difference_type;
+        typedef T&                                                                      reference;
+        typedef const T&                                                                const_reference;
+        typedef T*                                                                      pointer;
+        typedef const T*                                                                const_pointer;
+        typedef circular_buffer_iterator<detail::optional_storage<T>, T, N>             iterator;
         typedef circular_buffer_iterator<const detail::optional_storage<T>, const T, N> const_iterator;
-        typedef std::reverse_iterator<iterator>                          reverse_iterator;
-        typedef std::reverse_iterator<const_iterator>                    const_reverse_iterator;
+        typedef std::reverse_iterator<iterator>                                         reverse_iterator;
+        typedef std::reverse_iterator<const_iterator>                                   const_reverse_iterator;
         
     private:
-        typedef detail::cb_index_wrapper<size_type, N>                   wrapper_t;
-        typedef detail::optional_storage<T>                                    storage_type;
+        typedef detail::cb_index_wrapper<size_type, N> wrapper_t;
+        typedef detail::optional_storage<T>            storage_type;
 
         size_type    _head;
         size_type    _tail;
@@ -304,10 +301,10 @@ namespace jm
             , _size(count)
             , _buffer()
         {
-            if (BOOST_UNLIKELY(_size > N))
+            if (JM_CB_UNLIKELY(_size > N))
                 throw std::out_of_range("circular_buffer<T, N>(size_type count, const T&) count exceeded N");
 
-            if (BOOST_LIKELY(_size != 0))
+            if (JM_CB_LIKELY(_size != 0))
                 for (size_type i = 0; i < count; ++i)
                     _buffer[i] = storage_type(value);
             else
@@ -322,10 +319,10 @@ namespace jm
             , _size(count)
             , _buffer()
         {
-            if (BOOST_UNLIKELY(_size > N))
+            if (JM_CB_UNLIKELY(_size > N))
                 throw std::out_of_range("circular_buffer<T, N>(size_type count, const T&) count exceeded N");
 
-            if (BOOST_LIKELY(_size != 0))
+            if (JM_CB_LIKELY(_size != 0))
                 for (size_type i = 0; i < count; ++i)
                     _buffer[i] = storage_type(value);
             else
@@ -343,7 +340,7 @@ namespace jm
         {
             if (first != last) {
                 for (; first != last; ++first, ++_size) {
-                    if (BOOST_UNLIKELY(_size >= N))
+                    if (JM_CB_UNLIKELY(_size >= N))
                         throw std::out_of_range("circular_buffer<T, N>(InputIt first, InputIt last) distance exceeded N");
 
                     _buffer[_size] = storage_type(*first);
@@ -363,10 +360,10 @@ namespace jm
             , _size(init.size())
             , _buffer()
         {
-            if (BOOST_UNLIKELY(_size > N))
+            if (JM_CB_UNLIKELY(_size > N))
                 throw std::out_of_range("circular_buffer<T, N>(std::initializer_list<T> init) init.size() > N");
 
-            if (BOOST_UNLIKELY(_size == 0))
+            if (JM_CB_UNLIKELY(_size == 0))
                 _head = 1;
 
             storage_type* buf_ptr = _buffer;
@@ -539,7 +536,6 @@ namespace jm
             ++_size;
         }
 
-
         template<typename... Args>
         void emplace_back(Args&&... args)
         {
@@ -581,16 +577,16 @@ namespace jm
         JM_CB_CXX14_CONSTEXPR void pop_back() JM_CB_NOEXCEPT
         {
             size_type old_tail = _tail;
-            _tail = wrapper_t::decrement(_tail);
             --_size;
+            _tail = wrapper_t::decrement(_tail);
             destroy(old_tail);
         }
         
         JM_CB_CXX14_CONSTEXPR void pop_front() JM_CB_NOEXCEPT
         {
             size_type old_head = _head;
-            _head = wrapper_t::decrement(_head);
             --_size;
+            _head = wrapper_t::increment(_head);
             destroy(old_head);
         }
 
@@ -632,14 +628,14 @@ namespace jm
             return reverse_iterator(iterator(_buffer, _head, _size));
         }
 
-        JM_CB_CXX14_CONSTEXPR const_reverse_iterator  rbegin() const JM_CB_NOEXCEPT
+        JM_CB_CXX14_CONSTEXPR const_reverse_iterator rbegin() const JM_CB_NOEXCEPT
         {
             if (_size == 0)
                 return rend();
             return const_reverse_iterator(const_iterator(_buffer, _head, _size));
         }
 
-        JM_CB_CXX14_CONSTEXPR const_reverse_iterator  crbegin() const JM_CB_NOEXCEPT
+        JM_CB_CXX14_CONSTEXPR const_reverse_iterator crbegin() const JM_CB_NOEXCEPT
         {
             if (_size == 0)
                 return crend();

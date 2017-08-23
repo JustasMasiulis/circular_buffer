@@ -166,6 +166,57 @@ TEST_CASE("clear, empty, full")
     }
 }
 
+TEST_CASE("max_size")
+{
+    jm::circular_buffer<int, 5> cb1;
+    REQUIRE(cb1.max_size() == 5);
+}
+
+TEST_CASE("pop_back")
+{
+    auto cb = gen_filled_cb();
+
+    for (int i = 15; i > 0; --i)
+    {
+        REQUIRE(cb.back() == i);
+        cb.pop_back();
+        REQUIRE(cb.size() == i);
+    }
+    
+    REQUIRE(cb.front() == cb.back());
+    cb.pop_back();
+    cb.push_back(5);
+    REQUIRE(cb.back() == 5);
+    REQUIRE(cb.front() == 5);
+
+    cb.push_back(6);
+    REQUIRE(cb.back() == 6);
+    REQUIRE(cb.front() == 5);
+}
+
+TEST_CASE("pop_front")
+{
+    auto cb = gen_filled_cb();
+    REQUIRE(cb.front() == 0);
+
+    for (int i = 0; i < 15; ++i)
+    {
+        REQUIRE(cb.front() == i);
+        cb.pop_front();
+        REQUIRE(cb.size() == 15 - i);
+    }
+
+    REQUIRE(cb.front() == cb.back());
+    cb.pop_front();
+    cb.push_front(5);
+    REQUIRE(cb.back() == 5);
+    REQUIRE(cb.front() == 5);
+
+    cb.push_front(6);
+    REQUIRE(cb.back() == 5);
+    REQUIRE(cb.front() == 6);
+}
+
 TEST_CASE("push_back")
 {
     jm::circular_buffer<int, 16> cb;
@@ -336,24 +387,4 @@ TEST_CASE("circular_buffer_iterator complies to InputIterator")
     REQUIRE((i != j) == (!(i == j)));
 
     /// TODO finish this...
-}
-
-TEST_CASE("circular_buffer_iterator complies to ForwardIterator")
-{
-    using cbt = jm::circular_buffer<int, 4>;
-    using cbi = cbt::iterator;
-    {
-        cbi u;
-    }
-    {
-        cbi u{};
-    }
-    {
-        cbi();
-    }
-    {
-        cbi{};
-    }
-    
-    // TODO finish this
 }
