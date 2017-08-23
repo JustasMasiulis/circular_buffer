@@ -125,12 +125,6 @@ TEST_CASE("iterators construction")
     jm::circular_buffer<int, 4> buf1{ 1, 2, 3, 4 };
     jm::circular_buffer<int, 4> buf2{ buf1.begin(), buf1.end() };
 
-    for (auto v : buf1)
-        std::cout << v;
-
-    for (auto v : buf2)
-        std::cout << v;
-
     REQUIRE(std::equal(buf1.begin(), buf1.end(), buf2.begin()));
     REQUIRE(buf1.size() == buf2.size());
 }
