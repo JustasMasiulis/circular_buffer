@@ -279,7 +279,7 @@ TEST_CASE("emplace_front")
     REQUIRE(cb.size() == cb.max_size());
 }
 
-TEST_CASE("circular_buffer_iterator complies to Iterator")
+TEST_CASE("cb_iterator complies to Iterator")
 {
     using cbt = jm::circular_buffer<int, 4>;
     cbt cb;
@@ -358,7 +358,7 @@ TEST_CASE("circular_buffer_iterator complies to Iterator")
         static_assert(std::is_same<decltype(++r), decltype(r)&>::value, "++it doesnt return It&");
 }
 
-TEST_CASE("circular_buffer_iterator complies to InputIterator")
+TEST_CASE("cb_iterator complies to InputIterator")
 {
     using cbt = jm::circular_buffer<int, 4>;
     cbt cb;
@@ -386,5 +386,8 @@ TEST_CASE("circular_buffer_iterator complies to InputIterator")
 
     REQUIRE((i != j) == (!(i == j)));
 
-    /// TODO finish this...
+    cbt::iterator it = cb.begin();
+    cbt::const_iterator non_c_tttt(it);
+    cbt::const_iterator non_c_it = it;
+    non_c_it = it;
 }

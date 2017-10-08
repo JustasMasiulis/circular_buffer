@@ -80,9 +80,8 @@ namespace jm {
 
     namespace detail {
 
-        template<typename size_type, size_type N>
-        struct cb_index_wrapper
-        {
+        template<class size_type, size_type N>
+        struct cb_index_wrapper {
             inline static JM_CB_CONSTEXPR size_type increment(size_type value) JM_CB_NOEXCEPT
             {
                 return (value + 1) % N;
@@ -95,9 +94,8 @@ namespace jm {
         };
 
 
-        template<typename T>
-        union optional_storage 
-        {
+        template<class T>
+        union optional_storage {
             struct empty_t {};
 
             empty_t _empty;
@@ -113,7 +111,7 @@ namespace jm {
 
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-            inline JM_CB_CONSTEXPR optional_storage(T&& value) JM_CB_NOEXCEPT
+            inline constexpr optional_storage(T&& value)
                 : _value(std::move(value))
             {}
 
@@ -122,115 +120,128 @@ namespace jm {
 #endif
         };
 
+        template<class S, class TC, std::size_t N>
+        class cb_iterator {
+            template<class, class, std::size_t>
+            friend class cb_iterator;
+
+            S*          _buf;
+            std::size_t _pos;
+            std::size_t _left_in_forward;
+
+            typedef detail::cb_index_wrapper<std::size_t, N> wrapper_t;
+
+        public:
+            typedef std::bidirectional_iterator_tag iterator_category;
+            typedef TC                              value_type;
+            typedef std::ptrdiff_t                  difference_type;
+            typedef value_type*                     pointer;
+            typedef value_type&                     reference;
+
+            explicit JM_CB_CONSTEXPR cb_iterator() JM_CB_NOEXCEPT
+                    : _buf(JM_CB_NULLPTR)
+                    , _pos(0)
+                    , _left_in_forward(0)
+            {}
+
+            explicit JM_CB_CONSTEXPR cb_iterator(S* buf
+                                                 , std::size_t pos
+                                                 , std::size_t left_in_forward) JM_CB_NOEXCEPT
+                    : _buf(buf)
+                    , _pos(pos)
+                    , _left_in_forward(left_in_forward)
+            {}
+
+            template<class TSnc, class Tnc>
+            JM_CB_CONSTEXPR cb_iterator(const cb_iterator<TSnc, Tnc, N>& other) JM_CB_NOEXCEPT
+                    : _buf(other._buf)
+                    , _pos(other._pos)
+                    , _left_in_forward(other._left_in_forward)
+            {}
+
+            template<class TSnc, class Tnc>
+            JM_CB_CXX14_CONSTEXPR cb_iterator&
+            operator=(const cb_iterator<TSnc, Tnc, N>& other) JM_CB_NOEXCEPT
+            {
+                _buf             = other._buf;
+                _pos             = other._pos;
+                _left_in_forward = other._left_in_forward;
+                return *this;
+            };
+
+
+            JM_CB_CONSTEXPR reference operator*() const JM_CB_NOEXCEPT
+            {
+                return (_buf + _pos)->_value;
+            }
+
+            JM_CB_CONSTEXPR pointer operator->() const JM_CB_NOEXCEPT
+            {
+                return JM_CB_ADDRESSOF((_buf + _pos)->_value);
+            }
+
+            JM_CB_CXX14_CONSTEXPR cb_iterator& operator++() JM_CB_NOEXCEPT
+            {
+                _pos = wrapper_t::increment(_pos);
+                --_left_in_forward;
+                return *this;
+            }
+
+            JM_CB_CXX14_CONSTEXPR cb_iterator& operator--() JM_CB_NOEXCEPT
+            {
+                _pos = wrapper_t::decrement(_pos);
+                ++_left_in_forward;
+                return *this;
+            }
+
+            JM_CB_CXX14_CONSTEXPR cb_iterator operator++(int) JM_CB_NOEXCEPT
+            {
+                cb_iterator temp = *this;
+                _pos = wrapper_t::increment(_pos);
+                --_left_in_forward;
+                return temp;
+            }
+
+            JM_CB_CXX14_CONSTEXPR cb_iterator operator--(int) JM_CB_NOEXCEPT
+            {
+                cb_iterator temp = *this;
+                _pos = wrapper_t::decrement(_pos);
+                ++_left_in_forward;
+                return temp;
+            }
+
+            template<class Tx, class Ty>
+            JM_CB_CONSTEXPR bool operator==(const cb_iterator<Tx, Ty, N>& lhs) const JM_CB_NOEXCEPT
+            {
+                return lhs._left_in_forward == _left_in_forward
+                       && lhs._pos == _pos
+                       && lhs._buf == _buf;
+            }
+
+            template<typename Tx, typename Ty>
+            JM_CB_CONSTEXPR bool operator!=(const cb_iterator<Tx, Ty, N>& lhs) const JM_CB_NOEXCEPT
+            {
+                return !(operator==(lhs));
+            }
+        };
+
     }
 
 
-    template<typename S, typename TC, std::size_t N>
-    class circular_buffer_iterator
-    {
-    public:
-        typedef std::bidirectional_iterator_tag iterator_category;
-        typedef TC                              value_type;
-        typedef std::ptrdiff_t                  difference_type;
-        typedef value_type*                     pointer;
-        typedef value_type&                     reference;
-
-    private:
-        S*          _buf;
-        std::size_t _pos;
-        std::size_t _left_in_forward;
-
-        typedef detail::cb_index_wrapper<std::size_t, N> wrapper_t;
-
-    public:
-        explicit JM_CB_CONSTEXPR circular_buffer_iterator() JM_CB_NOEXCEPT
-            : _buf(JM_CB_NULLPTR)
-            , _pos(0)
-            , _left_in_forward(0)
-        {}
-
-        explicit JM_CB_CONSTEXPR circular_buffer_iterator(S* buf, std::size_t pos, std::size_t left_in_forward) JM_CB_NOEXCEPT
-            : _buf(buf)
-            , _pos(pos)
-            , _left_in_forward(left_in_forward)
-        {}
-
-        template<typename TSnc, typename Tnc>
-        explicit JM_CB_CONSTEXPR circular_buffer_iterator(const circular_buffer_iterator<TSnc, Tnc, N>& lhs) JM_CB_NOEXCEPT
-            : _buf(lhs._buf)
-            , _pos(lhs._pos)
-            , _left_in_forward(lhs._left_in_forward)
-        {}
-
-        JM_CB_CONSTEXPR reference operator*() const JM_CB_NOEXCEPT
-        {
-            return (_buf + _pos)->_value;
-        }
-
-        JM_CB_CONSTEXPR pointer operator->() const JM_CB_NOEXCEPT
-        {
-            return JM_CB_ADDRESSOF((_buf + _pos)->_value);
-        }
-
-        JM_CB_CXX14_CONSTEXPR circular_buffer_iterator& operator++() JM_CB_NOEXCEPT
-        {
-            _pos = wrapper_t::increment(_pos);
-            --_left_in_forward;
-            return *this;
-        }
-
-        JM_CB_CXX14_CONSTEXPR circular_buffer_iterator& operator--() JM_CB_NOEXCEPT
-        {
-            _pos = wrapper_t::decrement(_pos);
-            ++_left_in_forward;
-            return *this;
-        }
-
-        JM_CB_CXX14_CONSTEXPR circular_buffer_iterator operator++(int) JM_CB_NOEXCEPT
-        {
-            circular_buffer_iterator temp = *this;
-            _pos = wrapper_t::increment(_pos);
-            --_left_in_forward;
-            return temp;
-        }
-
-        JM_CB_CXX14_CONSTEXPR circular_buffer_iterator operator--(int) JM_CB_NOEXCEPT
-        {
-            circular_buffer_iterator temp = *this;
-            _pos = wrapper_t::decrement(_pos);
-            ++_left_in_forward;
-            return temp;
-        }
-
-        template<typename Tx, typename Ty>
-        JM_CB_CONSTEXPR bool operator==(const circular_buffer_iterator<Tx, Ty, N>& lhs) const JM_CB_NOEXCEPT
-        {
-            return lhs._pos == _pos && lhs._left_in_forward == _left_in_forward && lhs._buf == _buf;
-        }
-
-        template<typename Tx, typename Ty>
-        JM_CB_CONSTEXPR bool operator!=(const circular_buffer_iterator<Tx, Ty, N>& lhs) const JM_CB_NOEXCEPT
-        {
-            return !(operator==(lhs));
-        }
-    };
- 
-
     template<typename T, std::size_t N>
-    class circular_buffer
-    {
+    class circular_buffer {
     public: 
-        typedef T                                                                       value_type;
-        typedef std::size_t                                                             size_type;
-        typedef std::ptrdiff_t                                                          difference_type;
-        typedef T&                                                                      reference;
-        typedef const T&                                                                const_reference;
-        typedef T*                                                                      pointer;
-        typedef const T*                                                                const_pointer;
-        typedef circular_buffer_iterator<detail::optional_storage<T>, T, N>             iterator;
-        typedef circular_buffer_iterator<const detail::optional_storage<T>, const T, N> const_iterator;
-        typedef std::reverse_iterator<iterator>                                         reverse_iterator;
-        typedef std::reverse_iterator<const_iterator>                                   const_reverse_iterator;
+        typedef T                                                                  value_type;
+        typedef std::size_t                                                        size_type;
+        typedef std::ptrdiff_t                                                     difference_type;
+        typedef T&                                                                 reference;
+        typedef const T&                                                           const_reference;
+        typedef T*                                                                 pointer;
+        typedef const T*                                                           const_pointer;
+        typedef detail::cb_iterator<detail::optional_storage<T>, T, N>             iterator;
+        typedef detail::cb_iterator<const detail::optional_storage<T>, const T, N> const_iterator;
+        typedef std::reverse_iterator<iterator>                                    reverse_iterator;
+        typedef std::reverse_iterator<const_iterator>                              const_reverse_iterator;
         
     private:
         typedef detail::cb_index_wrapper<size_type, N> wrapper_t;
@@ -515,7 +526,7 @@ namespace jm {
             else
                 new_tail = wrapper_t::increment(_tail);
 
-            _buffer[new_tail]._value = std::move(value);
+            _buffer[new_tail]._value = std::move_if_noexcept(value);
             _tail = new_tail;
             ++_size;
         }
@@ -531,7 +542,7 @@ namespace jm {
             else
                 new_head = wrapper_t::decrement(_head);
 
-            _buffer[new_head]._value = std::move(value);
+            _buffer[new_head]._value = std::move_if_noexcept(value);
             _head = new_head;
             ++_size;
         }
@@ -675,4 +686,4 @@ namespace jm {
 
 }
 
-#endif // !JM_CIRCULAR_BUFFER_HPP
+#endif // include guard
