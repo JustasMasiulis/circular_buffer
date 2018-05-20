@@ -65,4 +65,4 @@ before_script:
 
 script:
   - make -j 2
-  - sudo ctest -V -j 2
+  - ctest -V -j 2
