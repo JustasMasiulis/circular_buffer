@@ -101,17 +101,17 @@ namespace jm {
             empty_t _empty;
             T       _value;
 
-            inline JM_CB_CONSTEXPR optional_storage() JM_CB_NOEXCEPT
+            inline explicit JM_CB_CONSTEXPR optional_storage() JM_CB_NOEXCEPT
                 : _empty()
             {}
 
-            inline JM_CB_CONSTEXPR optional_storage(const T& value) JM_CB_NOEXCEPT
+            inline explicit JM_CB_CONSTEXPR optional_storage(const T& value) JM_CB_NOEXCEPT
                 : _value(value)
             {}
 
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-            inline constexpr optional_storage(T&& value)
+            inline explicit constexpr optional_storage(T&& value)
                 : _value(std::move(value))
             {}
 
