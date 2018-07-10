@@ -1,18 +1,18 @@
 /*
-* Copyright 2017 Justas Masiulis
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Copyright 2017 Justas Masiulis
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #ifndef JM_CIRCULAR_BUFFER_HPP
 #define JM_CIRCULAR_BUFFER_HPP
@@ -27,52 +27,56 @@
 
 
 #ifndef JM_CIRCULAR_BUFFER_CXX_OLD
-    #define JM_CB_CONSTEXPR constexpr
-    #define JM_CB_NOEXCEPT noexcept
-    #define JM_CB_NULLPTR nullptr
-    #define JM_CB_ADDRESSOF(x) ::std::addressof(x)
+#define JM_CB_CONSTEXPR constexpr
+#define JM_CB_NOEXCEPT noexcept
+#define JM_CB_NULLPTR nullptr
+#define JM_CB_ADDRESSOF(x) ::std::addressof(x)
+#define JM_CB_IS_TRIVIALLY_DESTRUCTIBLE(type) \
+    ::std::is_trivially_destructible<type>::value
 #else
-    #define JM_CB_CONSTEXPR
-    #define JM_CB_NOEXCEPT
-    #define JM_CB_NULLPTR NULL
-    #define JM_CB_ADDRESSOF(x) &(x)
+#define JM_CB_CONSTEXPR
+#define JM_CB_NOEXCEPT
+#define JM_CB_NULLPTR NULL
+#define JM_CB_ADDRESSOF(x) &(x)
+#define JM_CB_IS_TRIVIALLY_DESTRUCTIBLE(type) false
 #endif
 
 #ifdef JM_CIRCULAR_BUFFER_CXX14
-    #define JM_CB_CXX14_CONSTEXPR constexpr
-    #define JM_CB_CXX14_INIT_0 = 0
+#define JM_CB_CXX14_CONSTEXPR constexpr
+#define JM_CB_CXX14_INIT_0 = 0
 #else
-    #define JM_CB_CXX14_CONSTEXPR
-    #define JM_CB_CXX14_INIT_0
+#define JM_CB_CXX14_CONSTEXPR
+#define JM_CB_CXX14_INIT_0
 #endif
 
 #if defined(__GNUC__)
-    #define JM_CB_LIKELY(x) __builtin_expect(x, 1)
-    #define JM_CB_UNLIKELY(x) __builtin_expect(x, 0)
+#define JM_CB_LIKELY(x) __builtin_expect(x, 1)
+#define JM_CB_UNLIKELY(x) __builtin_expect(x, 0)
 #elif defined(__clang__) && !defined(__c2__) && defined(__has_builtin)
-    #if __has_builtin(__builtin_expect)
-        #define JM_CB_LIKELY(x) __builtin_expect(x, 1)
-        #define JM_CB_UNLIKELY(x) __builtin_expect(x, 0)
-    #endif
+#if __has_builtin(__builtin_expect)
+#define JM_CB_LIKELY(x) __builtin_expect(x, 1)
+#define JM_CB_UNLIKELY(x) __builtin_expect(x, 0)
+#endif
 #endif
 
 
 #ifndef JM_CB_LIKELY
-    #define JM_CB_LIKELY(expr) (expr)
+#define JM_CB_LIKELY(expr) (expr)
 #endif // !JM_CB_LIKELY
 
 
 #ifndef JM_CB_UNLIKELY
-    #define JM_CB_UNLIKELY(expr) (expr)
+#define JM_CB_UNLIKELY(expr) (expr)
 #endif // !JM_CB_LIKELY
 
 
-#if defined(JM_CIRCULAR_BUFFER_LIKELY_FULL) // optimization if you know if the buffer will likely be full or not
-    #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) JM_CB_LIKELY(expr)
+#if defined(JM_CIRCULAR_BUFFER_LIKELY_FULL) // optimization if you know if the buffer will
+                                            // likely be full or not
+#define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) JM_CB_LIKELY(expr)
 #elif defined(JM_CIRCULAR_BUFFER_UNLIKELY_FULL)
-    #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) JM_CB_UNLIKELY(expr)
+#define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) JM_CB_UNLIKELY(expr)
 #else
-    #define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) expr
+#define JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(expr) expr
 #endif
 
 
@@ -82,32 +86,37 @@ namespace jm {
 
         template<class size_type, size_type N>
         struct cb_index_wrapper {
-            inline static JM_CB_CONSTEXPR size_type increment(size_type value) JM_CB_NOEXCEPT
+            inline static JM_CB_CONSTEXPR size_type increment(size_type value)
+                JM_CB_NOEXCEPT
             {
                 return (value + 1) % N;
             }
 
-            inline static JM_CB_CONSTEXPR size_type decrement(size_type value) JM_CB_NOEXCEPT
+            inline static JM_CB_CONSTEXPR size_type decrement(size_type value)
+                JM_CB_NOEXCEPT
             {
                 return (value + N - 1) % N;
             }
         };
 
 
-        template<class T>
+        template<class T, bool = JM_CB_IS_TRIVIALLY_DESTRUCTIBLE(T)>
         union optional_storage {
-            struct empty_t {};
+            struct empty_t {
+            };
 
             empty_t _empty;
             T       _value;
 
-            inline explicit JM_CB_CONSTEXPR optional_storage() JM_CB_NOEXCEPT
-                : _empty()
+            inline explicit JM_CB_CONSTEXPR optional_storage() JM_CB_NOEXCEPT : _empty()
             {}
 
-            inline explicit JM_CB_CONSTEXPR optional_storage(const T& value) JM_CB_NOEXCEPT
-                : _value(value)
+            inline explicit JM_CB_CONSTEXPR
+            optional_storage(const T& value) JM_CB_NOEXCEPT : _value(value)
             {}
+
+            ~optional_storage() {}
+
 
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
@@ -115,10 +124,33 @@ namespace jm {
                 : _value(std::move(value))
             {}
 
-            ~optional_storage() = default;
-
 #endif
         };
+
+#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+
+        template<class T>
+        union optional_storage<T, true /* trivially destructible */> {
+            struct empty_t {
+            };
+
+            empty_t _empty;
+            T       _value;
+
+            inline explicit JM_CB_CONSTEXPR optional_storage() JM_CB_NOEXCEPT : _empty()
+            {}
+
+            inline explicit JM_CB_CONSTEXPR
+            optional_storage(const T& value) JM_CB_NOEXCEPT : _value(value)
+            {}
+            inline explicit constexpr optional_storage(T&& value)
+                : _value(std::move(value))
+            {}
+
+            ~optional_storage() = default;
+        };
+
+#endif
 
         template<class S, class TC, std::size_t N>
         class cb_iterator {
@@ -138,30 +170,31 @@ namespace jm {
             typedef value_type*                     pointer;
             typedef value_type&                     reference;
 
-            explicit JM_CB_CONSTEXPR cb_iterator() JM_CB_NOEXCEPT
-                    : _buf(JM_CB_NULLPTR)
-                    , _pos(0)
-                    , _left_in_forward(0)
+            explicit JM_CB_CONSTEXPR cb_iterator() JM_CB_NOEXCEPT : _buf(JM_CB_NULLPTR),
+                                                                    _pos(0),
+                                                                    _left_in_forward(0)
             {}
 
-            explicit JM_CB_CONSTEXPR cb_iterator(S* buf
-                                                 , std::size_t pos
-                                                 , std::size_t left_in_forward) JM_CB_NOEXCEPT
-                    : _buf(buf)
-                    , _pos(pos)
-                    , _left_in_forward(left_in_forward)
+            explicit JM_CB_CONSTEXPR
+            cb_iterator(S*          buf,
+                        std::size_t pos,
+                        std::size_t left_in_forward) JM_CB_NOEXCEPT
+                : _buf(buf),
+                  _pos(pos),
+                  _left_in_forward(left_in_forward)
             {}
 
             template<class TSnc, class Tnc>
-            JM_CB_CONSTEXPR cb_iterator(const cb_iterator<TSnc, Tnc, N>& other) JM_CB_NOEXCEPT
-                    : _buf(other._buf)
-                    , _pos(other._pos)
-                    , _left_in_forward(other._left_in_forward)
+            JM_CB_CONSTEXPR
+            cb_iterator(const cb_iterator<TSnc, Tnc, N>& other) JM_CB_NOEXCEPT
+                : _buf(other._buf),
+                  _pos(other._pos),
+                  _left_in_forward(other._left_in_forward)
             {}
 
             template<class TSnc, class Tnc>
             JM_CB_CXX14_CONSTEXPR cb_iterator&
-            operator=(const cb_iterator<TSnc, Tnc, N>& other) JM_CB_NOEXCEPT
+                                  operator=(const cb_iterator<TSnc, Tnc, N>& other) JM_CB_NOEXCEPT
             {
                 _buf             = other._buf;
                 _pos             = other._pos;
@@ -194,43 +227,44 @@ namespace jm {
                 return *this;
             }
 
-            JM_CB_CXX14_CONSTEXPR cb_iterator operator++(int) JM_CB_NOEXCEPT
+            JM_CB_CXX14_CONSTEXPR cb_iterator operator++(int)JM_CB_NOEXCEPT
             {
                 cb_iterator temp = *this;
-                _pos = wrapper_t::increment(_pos);
+                _pos             = wrapper_t::increment(_pos);
                 --_left_in_forward;
                 return temp;
             }
 
-            JM_CB_CXX14_CONSTEXPR cb_iterator operator--(int) JM_CB_NOEXCEPT
+            JM_CB_CXX14_CONSTEXPR cb_iterator operator--(int)JM_CB_NOEXCEPT
             {
                 cb_iterator temp = *this;
-                _pos = wrapper_t::decrement(_pos);
+                _pos             = wrapper_t::decrement(_pos);
                 ++_left_in_forward;
                 return temp;
             }
 
             template<class Tx, class Ty>
-            JM_CB_CONSTEXPR bool operator==(const cb_iterator<Tx, Ty, N>& lhs) const JM_CB_NOEXCEPT
+            JM_CB_CONSTEXPR bool
+            operator==(const cb_iterator<Tx, Ty, N>& lhs) const JM_CB_NOEXCEPT
             {
-                return lhs._left_in_forward == _left_in_forward
-                       && lhs._pos == _pos
-                       && lhs._buf == _buf;
+                return lhs._left_in_forward == _left_in_forward && lhs._pos == _pos &&
+                       lhs._buf == _buf;
             }
 
             template<typename Tx, typename Ty>
-            JM_CB_CONSTEXPR bool operator!=(const cb_iterator<Tx, Ty, N>& lhs) const JM_CB_NOEXCEPT
+            JM_CB_CONSTEXPR bool
+            operator!=(const cb_iterator<Tx, Ty, N>& lhs) const JM_CB_NOEXCEPT
             {
                 return !(operator==(lhs));
             }
         };
 
-    }
+    } // namespace detail
 
 
     template<typename T, std::size_t N>
     class circular_buffer {
-    public: 
+    public:
         typedef T                                                                  value_type;
         typedef std::size_t                                                        size_type;
         typedef std::ptrdiff_t                                                     difference_type;
@@ -242,7 +276,7 @@ namespace jm {
         typedef detail::cb_iterator<const detail::optional_storage<T>, const T, N> const_iterator;
         typedef std::reverse_iterator<iterator>                                    reverse_iterator;
         typedef std::reverse_iterator<const_iterator>                              const_reverse_iterator;
-        
+
     private:
         typedef detail::cb_index_wrapper<size_type, N> wrapper_t;
         typedef detail::optional_storage<T>            storage_type;
@@ -257,18 +291,18 @@ namespace jm {
             _buffer[idx]._value.~T();
         }
 
-        inline JM_CB_CXX14_CONSTEXPR void copy_range(const storage_type* buffer
-                                                     , size_type first, size_type last)
+        inline JM_CB_CXX14_CONSTEXPR void
+        copy_range(const storage_type* buffer, size_type first, size_type last)
         {
-            for (size_type i = first; i < last; ++i)
+            for(size_type i = first; i < last; ++i)
                 _buffer[i]._value = (buffer + i)->_value;
         }
 
         inline JM_CB_CXX14_CONSTEXPR void copy_buffer(const storage_type* buffer)
         {
-            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N))
+            if(JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N))
                 copy_range(buffer, 0, N);
-            else if (_head > _tail)
+            else if(_head > _tail)
                 copy_range(buffer, _tail, _head + 1);
             else
                 copy_range(buffer, _head, _tail + 1);
@@ -277,46 +311,41 @@ namespace jm {
 
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-        inline JM_CB_CXX14_CONSTEXPR void move_range(storage_type* buffer
-                                                     , size_type first, size_type last)
+        inline JM_CB_CXX14_CONSTEXPR void
+        move_range(storage_type* buffer, size_type first, size_type last)
         {
-            for (size_type i = first; i < last; ++i)
+            for(size_type i = first; i < last; ++i)
                 _buffer[i]._value = std::move((buffer + i)->_value);
         }
 
         inline JM_CB_CXX14_CONSTEXPR void move_buffer(storage_type* buffer)
         {
-            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N))
+            if(JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N))
                 move_range(buffer, 0, N);
-            else if (_head > _tail)
+            else if(_head > _tail)
                 move_range(buffer, _tail, _head + 1);
             else
                 move_range(buffer, _head, _tail + 1);
         }
 
 #endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-    
+
     public:
         JM_CB_CONSTEXPR explicit circular_buffer()
-            : _head(1)
-            , _tail(0)
-            , _size(0)
-            , _buffer()
+            : _head(1), _tail(0), _size(0), _buffer()
         {}
 
 #if defined(JM_CIRCULAR_BUFFER_CXX14)
 
         constexpr circular_buffer(size_type count, const T& value)
-            : _head(0)
-            , _tail(count - 1)
-            , _size(count)
-            , _buffer()
+            : _head(0), _tail(count - 1), _size(count), _buffer()
         {
-            if (JM_CB_UNLIKELY(_size > N))
-                throw std::out_of_range("circular_buffer<T, N>(size_type count, const T&) count exceeded N");
+            if(JM_CB_UNLIKELY(_size > N))
+                throw std::out_of_range(
+                    "circular_buffer<T, N>(size_type count, const T&) count exceeded N");
 
-            if (JM_CB_LIKELY(_size != 0))
-                for (size_type i = 0; i < count; ++i)
+            if(JM_CB_LIKELY(_size != 0))
+                for(size_type i = 0; i < count; ++i)
                     _buffer[i] = storage_type(value);
             else
                 _head = 1;
@@ -325,16 +354,14 @@ namespace jm {
 #else
 
         explicit circular_buffer(size_type count, const T& value = T())
-            : _head(0)
-            , _tail(count - 1)
-            , _size(count)
-            , _buffer()
+            : _head(0), _tail(count - 1), _size(count), _buffer()
         {
-            if (JM_CB_UNLIKELY(_size > N))
-                throw std::out_of_range("circular_buffer<T, N>(size_type count, const T&) count exceeded N");
+            if(JM_CB_UNLIKELY(_size > N))
+                throw std::out_of_range(
+                    "circular_buffer<T, N>(size_type count, const T&) count exceeded N");
 
-            if (JM_CB_LIKELY(_size != 0))
-                for (size_type i = 0; i < count; ++i)
+            if(JM_CB_LIKELY(_size != 0))
+                for(size_type i = 0; i < count; ++i)
                     _buffer[i] = storage_type(value);
             else
                 _head = 1;
@@ -344,15 +371,13 @@ namespace jm {
 
         template<typename InputIt>
         JM_CB_CXX14_CONSTEXPR circular_buffer(InputIt first, InputIt last)
-            : _head(0)
-            , _tail(0)
-            , _size(0)
-            , _buffer()
+            : _head(0), _tail(0), _size(0), _buffer()
         {
-            if (first != last) {
-                for (; first != last; ++first, ++_size) {
-                    if (JM_CB_UNLIKELY(_size >= N))
-                        throw std::out_of_range("circular_buffer<T, N>(InputIt first, InputIt last) distance exceeded N");
+            if(first != last) {
+                for(; first != last; ++first, ++_size) {
+                    if(JM_CB_UNLIKELY(_size >= N))
+                        throw std::out_of_range(
+                            "circular_buffer<T, N>(InputIt first, InputIt last) distance exceeded N");
 
                     _buffer[_size] = storage_type(*first);
                 }
@@ -366,29 +391,24 @@ namespace jm {
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         JM_CB_CXX14_CONSTEXPR circular_buffer(std::initializer_list<T> init)
-            : _head(0)
-            , _tail(init.size() - 1)
-            , _size(init.size())
-            , _buffer()
+            : _head(0), _tail(init.size() - 1), _size(init.size()), _buffer()
         {
-            if (JM_CB_UNLIKELY(_size > N))
-                throw std::out_of_range("circular_buffer<T, N>(std::initializer_list<T> init) init.size() > N");
+            if(JM_CB_UNLIKELY(_size > N))
+                throw std::out_of_range(
+                    "circular_buffer<T, N>(std::initializer_list<T> init) init.size() > N");
 
-            if (JM_CB_UNLIKELY(_size == 0))
+            if(JM_CB_UNLIKELY(_size == 0))
                 _head = 1;
 
             storage_type* buf_ptr = _buffer;
-            for (auto it = init.begin(), end = init.end(); it != end; ++it, ++buf_ptr)
+            for(auto it = init.begin(), end = init.end(); it != end; ++it, ++buf_ptr)
                 *buf_ptr = std::move(storage_type(std::move(*it)));
         }
 
 #endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         JM_CB_CXX14_CONSTEXPR circular_buffer(const circular_buffer& other)
-            : _head(other._head)
-            , _tail(other._tail)
-            , _size(other._size)
-            , _buffer()
+            : _head(other._head), _tail(other._tail), _size(other._size), _buffer()
         {
             copy_buffer(other._buffer);
         }
@@ -407,10 +427,7 @@ namespace jm {
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         JM_CB_CXX14_CONSTEXPR circular_buffer(circular_buffer&& other)
-            : _head(other._head)
-            , _tail(other._tail)
-            , _size(other._size)
-            , _buffer()
+            : _head(other._head), _tail(other._tail), _size(other._size), _buffer()
         {
             move_buffer(other._buffer);
         }
@@ -428,43 +445,31 @@ namespace jm {
 
 #endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-    /// capacity
-        JM_CB_CONSTEXPR bool empty() const JM_CB_NOEXCEPT
-        {
-            return _size == 0;
-        }
+        /// capacity
+        JM_CB_CONSTEXPR bool empty() const JM_CB_NOEXCEPT { return _size == 0; }
 
-        JM_CB_CONSTEXPR bool full() const JM_CB_NOEXCEPT
-        {
-            return _size == N;
-        }
-        
-        JM_CB_CONSTEXPR size_type size() const JM_CB_NOEXCEPT
-        {
-            return _size;
-        }
-        
-        JM_CB_CONSTEXPR size_type max_size() const JM_CB_NOEXCEPT
-        {
-            return N; 
-        }
-       
-    /// element access
+        JM_CB_CONSTEXPR bool full() const JM_CB_NOEXCEPT { return _size == N; }
+
+        JM_CB_CONSTEXPR size_type size() const JM_CB_NOEXCEPT { return _size; }
+
+        JM_CB_CONSTEXPR size_type max_size() const JM_CB_NOEXCEPT { return N; }
+
+        /// element access
         JM_CB_CXX14_CONSTEXPR reference front() JM_CB_NOEXCEPT
         {
             return _buffer[_head]._value;
         }
-        
+
         JM_CB_CONSTEXPR const_reference front() const JM_CB_NOEXCEPT
         {
             return _buffer[_head]._value;
         }
-        
+
         JM_CB_CXX14_CONSTEXPR reference back() JM_CB_NOEXCEPT
         {
             return _buffer[_tail]._value;
         }
-        
+
         JM_CB_CONSTEXPR const_reference back() const JM_CB_NOEXCEPT
         {
             return _buffer[_tail]._value;
@@ -479,37 +484,37 @@ namespace jm {
         {
             return JM_CB_ADDRESSOF(_buffer[0]._value);
         }
-        
-    /// modifiers
+
+        /// modifiers
         JM_CB_CXX14_CONSTEXPR void push_back(const value_type& value)
         {
             size_type new_tail JM_CB_CXX14_INIT_0;
             if(JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
                 new_tail = _head;
-                _head = wrapper_t::increment(_head);
+                _head    = wrapper_t::increment(_head);
                 --_size;
             }
             else
                 new_tail = wrapper_t::increment(_tail);
 
-            _buffer[new_tail]._value = value; 
-            _tail = new_tail;
+            _buffer[new_tail]._value = value;
+            _tail                    = new_tail;
             ++_size;
         }
 
         JM_CB_CXX14_CONSTEXPR void push_front(const value_type& value)
         {
             size_type new_head JM_CB_CXX14_INIT_0;
-            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
+            if(JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
                 new_head = _tail;
-                _tail = wrapper_t::decrement(_tail);
+                _tail    = wrapper_t::decrement(_tail);
                 --_size;
             }
             else
                 new_head = wrapper_t::decrement(_head);
 
             _buffer[new_head]._value = value;
-            _head = new_head;
+            _head                    = new_head;
             ++_size;
         }
 
@@ -518,49 +523,50 @@ namespace jm {
         JM_CB_CXX14_CONSTEXPR void push_back(value_type&& value)
         {
             size_type new_tail = 0;
-            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
+            if(JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
                 new_tail = _head;
-                _head = wrapper_t::increment(_head);
+                _head    = wrapper_t::increment(_head);
                 --_size;
             }
             else
                 new_tail = wrapper_t::increment(_tail);
 
             _buffer[new_tail]._value = std::move_if_noexcept(value);
-            _tail = new_tail;
+            _tail                    = new_tail;
             ++_size;
         }
 
         JM_CB_CXX14_CONSTEXPR void push_front(value_type&& value)
         {
             size_type new_head = 0;
-            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
+            if(JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
                 new_head = _tail;
-                _tail = wrapper_t::decrement(_tail);
+                _tail    = wrapper_t::decrement(_tail);
                 --_size;
             }
             else
                 new_head = wrapper_t::decrement(_head);
 
             _buffer[new_head]._value = std::move_if_noexcept(value);
-            _head = new_head;
+            _head                    = new_head;
             ++_size;
         }
 
         template<typename... Args>
         void emplace_back(Args&&... args)
         {
-            size_type new_tail; 
-            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
+            size_type new_tail;
+            if(JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
                 new_tail = _head;
-                _head = wrapper_t::increment(_head);
+                _head    = wrapper_t::increment(_head);
                 --_size;
                 destroy(new_tail);
             }
             else
                 new_tail = wrapper_t::increment(_tail);
 
-            new (JM_CB_ADDRESSOF(_buffer[new_tail]._value)) value_type(std::forward<Args>(args)...);
+            new(JM_CB_ADDRESSOF(_buffer[new_tail]._value))
+                value_type(std::forward<Args>(args)...);
             _tail = new_tail;
             ++_size;
         }
@@ -569,22 +575,23 @@ namespace jm {
         void emplace_front(Args&&... args)
         {
             size_type new_head;
-            if (JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
+            if(JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N)) {
                 new_head = _tail;
-                _tail = wrapper_t::decrement(_tail);
+                _tail    = wrapper_t::decrement(_tail);
                 --_size;
                 destroy(new_head);
             }
             else
                 new_head = wrapper_t::decrement(_head);
 
-            new (JM_CB_ADDRESSOF(_buffer[new_head]._value)) value_type(std::forward<Args>(args)...);
+            new(JM_CB_ADDRESSOF(_buffer[new_head]._value))
+                value_type(std::forward<Args>(args)...);
             _head = new_head;
             ++_size;
         }
 
-#endif// !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-        
+#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+
         JM_CB_CXX14_CONSTEXPR void pop_back() JM_CB_NOEXCEPT
         {
             size_type old_tail = _tail;
@@ -592,7 +599,7 @@ namespace jm {
             _tail = wrapper_t::decrement(_tail);
             destroy(old_tail);
         }
-        
+
         JM_CB_CXX14_CONSTEXPR void pop_front() JM_CB_NOEXCEPT
         {
             size_type old_head = _head;
@@ -603,52 +610,52 @@ namespace jm {
 
         JM_CB_CXX14_CONSTEXPR void clear() JM_CB_NOEXCEPT
         {
-            while (_size != 0)
+            while(_size != 0)
                 pop_back();
 
             _head = 1;
             _tail = 0;
         }
 
-    /// iterators
+        /// iterators
         JM_CB_CXX14_CONSTEXPR iterator begin() JM_CB_NOEXCEPT
         {
-            if (_size == 0)
+            if(_size == 0)
                 return end();
             return iterator(_buffer, _head, _size);
         }
 
         JM_CB_CXX14_CONSTEXPR const_iterator begin() const JM_CB_NOEXCEPT
         {
-            if (_size == 0)
+            if(_size == 0)
                 return end();
             return const_iterator(_buffer, _head, _size);
         }
 
         JM_CB_CXX14_CONSTEXPR const_iterator cbegin() const JM_CB_NOEXCEPT
         {
-            if (_size == 0)
+            if(_size == 0)
                 return cend();
             return const_iterator(_buffer, _head, _size);
         }
 
         JM_CB_CXX14_CONSTEXPR reverse_iterator rbegin() JM_CB_NOEXCEPT
         {
-            if (_size == 0)
+            if(_size == 0)
                 return rend();
             return reverse_iterator(iterator(_buffer, _head, _size));
         }
 
         JM_CB_CXX14_CONSTEXPR const_reverse_iterator rbegin() const JM_CB_NOEXCEPT
         {
-            if (_size == 0)
+            if(_size == 0)
                 return rend();
             return const_reverse_iterator(const_iterator(_buffer, _head, _size));
         }
 
         JM_CB_CXX14_CONSTEXPR const_reverse_iterator crbegin() const JM_CB_NOEXCEPT
         {
-            if (_size == 0)
+            if(_size == 0)
                 return crend();
             return const_reverse_iterator(const_iterator(_buffer, _head, _size));
         }
@@ -670,20 +677,22 @@ namespace jm {
 
         JM_CB_CXX14_CONSTEXPR reverse_iterator rend() JM_CB_NOEXCEPT
         {
-            return reverse_iterator(iterator( _buffer, wrapper_t::increment(_tail), 0 ));
+            return reverse_iterator(iterator(_buffer, wrapper_t::increment(_tail), 0));
         }
 
         JM_CB_CXX14_CONSTEXPR const_reverse_iterator rend() const JM_CB_NOEXCEPT
         {
-            return const_reverse_iterator(const_iterator(_buffer, wrapper_t::increment(_tail), 0));
+            return const_reverse_iterator(
+                const_iterator(_buffer, wrapper_t::increment(_tail), 0));
         }
 
         JM_CB_CXX14_CONSTEXPR const_reverse_iterator crend() const JM_CB_NOEXCEPT
         {
-            return const_reverse_iterator(const_iterator(_buffer, wrapper_t::increment(_tail), 0));
+            return const_reverse_iterator(
+                const_iterator(_buffer, wrapper_t::increment(_tail), 0));
         }
     };
 
-}
+} // namespace jm
 
 #endif // include guard
