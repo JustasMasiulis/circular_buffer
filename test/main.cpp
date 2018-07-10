@@ -172,7 +172,7 @@ TEST_CASE("n items construction")
     REQUIRE(cb.size() == 4);
 }
 
-TEST_CASE("clear, empty, full")
+TEST_CASE("clear empty full")
 {
     {
         auto cb = gen_filled_cb(12);
