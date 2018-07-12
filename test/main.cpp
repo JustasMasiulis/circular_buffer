@@ -20,7 +20,10 @@ struct leak_checker {
     leak_checker(leak_checker&&) { ++num_constructions; }
 
     leak_checker& operator=(const leak_checker&) = default;
-    leak_checker& operator=(leak_checker&&) = default;
+    leak_checker& operator=(leak_checker&&) noexcept = default;
+
+    std::vector<int> aa;
+    std::unique_ptr<int> b;
 };
 
 
@@ -52,6 +55,8 @@ TEST_CASE("quick test for leaks")
         for(int i = 0; i < 128; ++i)
             buf.push_back({});
         jm::circular_buffer<leak_checker, 7> buf2(buf.begin(), buf.end());
+        jm::circular_buffer<leak_checker, 2> buf3{ {}, {} };
+        buf = buf3;
         buf2.clear();
     }
     INFO("constructions: " << num_constructions << "deletions: " << num_deletions);
