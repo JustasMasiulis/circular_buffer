@@ -22,8 +22,7 @@ struct leak_checker {
     leak_checker& operator=(const leak_checker&) = default;
     leak_checker& operator=(leak_checker&&) noexcept = default;
 
-    std::vector<int> aa;
-    std::unique_ptr<int> b;
+    std::vector<float> aa{1.f, 2.f, 4.f};
 };
 
 

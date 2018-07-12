@@ -315,42 +315,25 @@ namespace jm {
 
         inline void destroy(size_type idx) JM_CB_NOEXCEPT { _buffer[idx]._value.~T(); }
 
-        inline void
-        copy_range(const storage_type* buffer, size_type first, size_type last)
+        inline void copy_buffer(const circular_buffer& other)
         {
-            for(size_type i = first; i < last; ++i)
-                new(JM_CB_ADDRESSOF(_buffer[i]._value)) T((buffer + i)->_value);
-        }
+            const_iterator       first = other.cbegin();
+            const const_iterator last  = other.cend();
 
-        inline void copy_buffer(const storage_type* buffer)
-        {
-            if(JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N))
-                copy_range(buffer, 0, N);
-            else if(_head > _tail)
-                copy_range(buffer, _tail, _head + 1);
-            else
-                copy_range(buffer, _head, _tail + 1);
+            for(; first != last; ++first)
+                push_back(*first);
         }
 
 
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-        inline JM_CB_CXX14_CONSTEXPR void
-        move_range(storage_type* buffer, size_type first, size_type last)
+        inline void move_buffer(circular_buffer&& other)
         {
-            for(size_type i = first; i < last; ++i)
-                new(JM_CB_ADDRESSOF(_buffer[i]._value))
-                    T(std::move((buffer + i)->_value));
-        }
+            iterator       first = other.begin();
+            const iterator last  = other.end();
 
-        inline JM_CB_CXX14_CONSTEXPR void move_buffer(storage_type* buffer)
-        {
-            if(JM_CIRCULAR_BUFFER_FULLNESS_LIKEHOOD(_size == N))
-                move_range(buffer, 0, N);
-            else if(_head > _tail)
-                move_range(buffer, _tail, _head + 1);
-            else
-                move_range(buffer, _head, _tail + 1);
+            for(; first != last; ++first)
+                emplace_back(std::move(*first));
         }
 
 #endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
@@ -416,42 +399,35 @@ namespace jm {
 #endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         circular_buffer(const circular_buffer& other)
-            : _head(other._head), _tail(other._tail), _size(other._size), _buffer()
+            : _head(1), _tail(0), _size(0), _buffer()
         {
-            copy_buffer(other._buffer);
+            copy_buffer(other);
         }
 
         circular_buffer& operator=(const circular_buffer& other)
         {
-            _head = other._head;
-            _tail = other._tail;
-            _size = other._size;
-
-            copy_buffer(other._buffer);
-
+            clear();
+            copy_buffer(other);
             return *this;
         }
 
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-        circular_buffer(circular_buffer&& other)
-            : _head(other._head), _tail(other._tail), _size(other._size), _buffer()
+        circular_buffer(circular_buffer&& other) : _head(1), _tail(0), _size(0), _buffer()
         {
-            move_buffer(other._buffer);
+            move_buffer(std::move(other));
         }
 
         circular_buffer& operator=(circular_buffer&& other)
         {
-            _head = other._head;
-            _tail = other._tail;
-            _size = other._size;
-
-            move_buffer(other._buffer);
-
+            clear();
+            move_buffer(std::move(other));
             return *this;
         }
 
 #endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+
+        ~circular_buffer() { clear(); }
 
         /// capacity
         JM_CB_CONSTEXPR bool empty() const JM_CB_NOEXCEPT { return _size == 0; }
