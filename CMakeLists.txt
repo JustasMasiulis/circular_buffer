@@ -23,7 +23,6 @@ if (CIRCULAR_BUFFER_TESTING)
 	add_catch_and_benchmark()
 	
 	# catch integration for tests
-	include ("${CMAKE_CURRENT_BINARY_DIR}/_deps/catch2-src/contrib/ParseAndAddCatchTests.cmake")
 	include ("${CMAKE_CURRENT_BINARY_DIR}/_deps/catch2-src/contrib/Catch.cmake")
 	include(CTest)
 

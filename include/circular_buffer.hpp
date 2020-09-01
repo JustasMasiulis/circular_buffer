@@ -21,6 +21,9 @@
 #include <algorithm>
 #include <stdexcept>
 
+#include <array>
+#include <vector>
+
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 #include <type_traits>
 #include <initializer_list>
@@ -285,10 +288,20 @@ namespace jm {
             }
         };
 
+        template<typename T, std::size_t N, typename Container = std::array<detail::optional_storage<T>, N>>
+        auto make_array() {
+          if constexpr (std::is_same_v< Container, std::vector<detail::optional_storage<T>>>) {
+            return Container(N);
+          }
+          else {
+            return Container();
+          }
+        }
+
     } // namespace detail
 
-
-    template<typename T, std::size_t N>
+    
+    template<typename T, std::size_t N, typename Container = std::array<detail::optional_storage<T>, N>>
     class circular_buffer {
     public:
         typedef T                                                      value_type;
@@ -311,7 +324,7 @@ namespace jm {
         size_type    _head;
         size_type    _tail;
         size_type    _size;
-        storage_type _buffer[N];
+        Container _buffer;
 
         inline void destroy(size_type idx) JM_CB_NOEXCEPT { _buffer[idx]._value.~T(); }
 
@@ -340,14 +353,14 @@ namespace jm {
 
     public:
         JM_CB_CONSTEXPR explicit circular_buffer()
-            : _head(1), _tail(0), _size(0), _buffer()
-        {}
+          : _head(1), _tail(0), _size(0),  _buffer(detail::make_array<T, N, Container>())
+        {  }
 
 #if defined(JM_CIRCULAR_BUFFER_CXX_OLD)
         explicit
 #endif
             circular_buffer(size_type count, const T& value = T())
-            : _head(0), _tail(count - 1), _size(count), _buffer()
+            : _head(0), _tail(count - 1), _size(count), _buffer(detail::make_array<T, N, Container>())
         {
             if(JM_CB_UNLIKELY(_size > N))
                 throw std::out_of_range(
@@ -362,7 +375,7 @@ namespace jm {
 
         template<typename InputIt>
         circular_buffer(InputIt first, InputIt last)
-            : _head(0), _tail(0), _size(0), _buffer()
+            : _head(0), _tail(0), _size(0), _buffer(detail::make_array<T, N, Container>())
         {
             if(first != last) {
                 for(; first != last; ++first, ++_size) {
@@ -382,16 +395,17 @@ namespace jm {
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         circular_buffer(std::initializer_list<T> init)
-            : _head(0), _tail(init.size() - 1), _size(init.size()), _buffer()
+            : _head(0), _tail(init.size() - 1), _size(init.size()), _buffer(detail::make_array<T, N, Container>())
         {
             if(JM_CB_UNLIKELY(_size > N))
                 throw std::out_of_range(
                     "circular_buffer<T, N>(std::initializer_list<T> init) init.size() > N");
 
+
             if(JM_CB_UNLIKELY(_size == 0))
                 _head = 1;
 
-            storage_type* buf_ptr = _buffer;
+            storage_type* buf_ptr = _buffer.data();
             for(auto it = init.begin(), end = init.end(); it != end; ++it, ++buf_ptr)
                 new(JM_CB_ADDRESSOF(buf_ptr->_value)) T(*it);
         }
@@ -399,7 +413,7 @@ namespace jm {
 #endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         circular_buffer(const circular_buffer& other)
-            : _head(1), _tail(0), _size(0), _buffer()
+            : _head(1), _tail(0), _size(0), _buffer(detail::make_array<T, N, Container>())
         {
             copy_buffer(other);
         }
@@ -413,7 +427,7 @@ namespace jm {
 
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-        circular_buffer(circular_buffer&& other) : _head(1), _tail(0), _size(0), _buffer()
+        circular_buffer(circular_buffer&& other) : _head(1), _tail(0), _size(0), _buffer(detail::make_array<T, N, Container>())
         {
             move_buffer(std::move(other));
         }
@@ -616,76 +630,82 @@ namespace jm {
         {
             if(_size == 0)
                 return end();
-            return iterator(_buffer, _head, _size);
+            return iterator(_buffer.data(), _head, _size);
         }
 
         JM_CB_CXX14_CONSTEXPR const_iterator begin() const JM_CB_NOEXCEPT
         {
             if(_size == 0)
                 return end();
-            return const_iterator(_buffer, _head, _size);
+            return const_iterator(_buffer.data(), _head, _size);
         }
 
         JM_CB_CXX14_CONSTEXPR const_iterator cbegin() const JM_CB_NOEXCEPT
         {
             if(_size == 0)
                 return cend();
-            return const_iterator(_buffer, _head, _size);
+            return const_iterator(_buffer.data(), _head, _size);
         }
 
         JM_CB_CXX14_CONSTEXPR reverse_iterator rbegin() JM_CB_NOEXCEPT
         {
             if(_size == 0)
                 return rend();
-            return reverse_iterator(iterator(_buffer, _head, _size));
+            return reverse_iterator(iterator(_buffer.data(), _head, _size));
         }
 
         JM_CB_CXX14_CONSTEXPR const_reverse_iterator rbegin() const JM_CB_NOEXCEPT
         {
             if(_size == 0)
                 return rend();
-            return const_reverse_iterator(const_iterator(_buffer, _head, _size));
+            return const_reverse_iterator(const_iterator(_buffer.data(), _head, _size));
         }
 
         JM_CB_CXX14_CONSTEXPR const_reverse_iterator crbegin() const JM_CB_NOEXCEPT
         {
             if(_size == 0)
                 return crend();
-            return const_reverse_iterator(const_iterator(_buffer, _head, _size));
+            return const_reverse_iterator(const_iterator(_buffer.data(), _head, _size));
         }
 
         JM_CB_CXX14_CONSTEXPR iterator end() JM_CB_NOEXCEPT
         {
-            return iterator(_buffer, wrapper_t::increment(_tail), 0);
+            return iterator(_buffer.data(), wrapper_t::increment(_tail), 0);
         }
 
         JM_CB_CXX14_CONSTEXPR const_iterator end() const JM_CB_NOEXCEPT
         {
-            return const_iterator(_buffer, wrapper_t::increment(_tail), 0);
+            return const_iterator(_buffer.data(), wrapper_t::increment(_tail), 0);
         }
 
         JM_CB_CXX14_CONSTEXPR const_iterator cend() const JM_CB_NOEXCEPT
         {
-            return const_iterator(_buffer, wrapper_t::increment(_tail), 0);
+            return const_iterator(_buffer.data(), wrapper_t::increment(_tail), 0);
         }
 
         JM_CB_CXX14_CONSTEXPR reverse_iterator rend() JM_CB_NOEXCEPT
         {
-            return reverse_iterator(iterator(_buffer, wrapper_t::increment(_tail), 0));
+            return reverse_iterator(iterator(_buffer.data(), wrapper_t::increment(_tail), 0));
         }
 
         JM_CB_CXX14_CONSTEXPR const_reverse_iterator rend() const JM_CB_NOEXCEPT
         {
             return const_reverse_iterator(
-                const_iterator(_buffer, wrapper_t::increment(_tail), 0));
+                const_iterator(_buffer.data(), wrapper_t::increment(_tail), 0));
         }
 
         JM_CB_CXX14_CONSTEXPR const_reverse_iterator crend() const JM_CB_NOEXCEPT
         {
             return const_reverse_iterator(
-                const_iterator(_buffer, wrapper_t::increment(_tail), 0));
+                const_iterator(_buffer.data(), wrapper_t::increment(_tail), 0));
         }
     };
+
+    template<typename T, std::size_t N>
+    using StaticCircleBuffer = circular_buffer<T, N, std::array<detail::optional_storage<T>, N>>;
+
+    template<typename T, std::size_t N>
+    using DynamicCircleBuffer = circular_buffer<T, N, std::vector<detail::optional_storage<T>>>;
 
 } // namespace jm
 
