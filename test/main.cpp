@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
 #define JM_CIRCULAR_BUFFER_CXX14
 #include <circular_buffer.hpp>
-#include "../Catch/include/catch.hpp"
+#include <catch2/catch.hpp>
 
 #include <numeric>
 #include <vector>

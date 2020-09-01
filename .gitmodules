@@ -1,6 +1,0 @@
-[submodule "Catch"]
-	path = Catch
-	url = https://github.com/philsquared/Catch
-[submodule "config"]
-	path = config
-	url = https://github.com/boostorg/config
