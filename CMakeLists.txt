@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.2)
 project(circular_buffer CXX)
 
+option (CIRCULAR_BUFFER_TESTING "Enable test library" ON)
+option (CIRCULAR_BUFFER_EXAMPLE "Enable example library" ON)
+
 # force set release
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
@@ -15,27 +18,19 @@ target_compile_features( circular_buffer INTERFACE cxx_std_17 )
 set_project_warinigs(circular_buffer)
 
 
-add_executable(tests_main ${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp)
-target_link_libraries(tests_main circular_buffer Catch2)
+if (CIRCULAR_BUFFER_TESTING)
+	enable_testing()
+	add_catch_and_benchmark()
+	
+	# catch integration for tests
+	include ("${CMAKE_CURRENT_BINARY_DIR}/_deps/catch2-src/contrib/ParseAndAddCatchTests.cmake")
+	include ("${CMAKE_CURRENT_BINARY_DIR}/_deps/catch2-src/contrib/Catch.cmake")
+	include(CTest)
 
-# catch integration for tests
-include ("${CMAKE_CURRENT_BINARY_DIR}/_deps/catch2-src/contrib/ParseAndAddCatchTests.cmake")
-include ("${CMAKE_CURRENT_BINARY_DIR}/_deps/catch2-src/contrib/Catch.cmake")
-include(CTest)
+	#set target executable
+	add_executable ( circular_buffer_test test/main.cpp )
 
-
-#set (TEST_SOURCE_FILES
-#		${PROJECT_SOURCE_DIR}/test/main.cpp)
-
-#set target executable
-add_executable (
-	circular_buffer_test 
-		test/main.cpp
-	)
-
-#add the library
-target_link_libraries (circular_buffer_test circular_buffer Catch2)
-
-enable_testing()
-catch_discover_tests(circular_buffer_test)
-#ParseAndAddCatchTests (circular_buffer_test)
+	#add the library
+	target_link_libraries (circular_buffer_test circular_buffer Catch2)
+	catch_discover_tests(circular_buffer_test)
+endif()
