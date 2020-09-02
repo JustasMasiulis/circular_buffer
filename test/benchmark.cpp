@@ -54,9 +54,9 @@ namespace {
   }
 
   void BM_StaticCircleBufferCreation_k1kB_push_back(benchmark::State& state) {
-    jm::static_circular_buffer<std::string, k1kB> data;
     srand(time(0));
     for (auto _ : state) {
+      jm::static_circular_buffer<std::string, k1kB> data;
       for (size_t i = 0; i < state.range(0); i++) {
         data.push_back(generateRandomString());
       }
@@ -66,12 +66,54 @@ namespace {
   void BM_DynamicCircleBufferCreation_k1kB_push_back(benchmark::State& state) {
 
     try {
-      jm::dynamic_circular_buffer<std::string, k1kB> data;
       srand(time(0));
       for (auto _ : state) {
+        jm::dynamic_circular_buffer<std::string, k1kB> data;
         for (size_t i = 0; i < state.range(0); i++) {
           data.push_back(generateRandomString());
         }
+      }
+    }
+    catch (std::exception& e) {
+      std::cerr << e.what() << std::endl;
+    }
+  }
+
+  void BM_StaticCircleBufferCreation_k1kB_iteration(benchmark::State& state) {
+
+    try {
+      for (auto _ : state) {
+        jm::static_circular_buffer<std::string, k1kB> data;
+        state.PauseTiming();
+        for (size_t i = 0; i < state.range(0); i++) {
+          data.push_back(generateRandomString());
+        }
+        state.ResumeTiming();
+
+        std::for_each(data.begin(), data.end(),[](auto& value){
+          value = generateRandomString();
+        });
+      }
+    }
+    catch (std::exception& e) {
+      std::cerr << e.what() << std::endl;
+    }
+  }
+
+  void BM_DynamicCircleBufferCreation_k1kB_iteration(benchmark::State& state) {
+
+    try {
+      for (auto _ : state) {
+        jm::dynamic_circular_buffer<std::string, k1kB> data;
+        state.PauseTiming();
+        for (size_t i = 0; i < state.range(0); i++) {
+          data.push_back(generateRandomString());
+        }
+        state.ResumeTiming();
+
+        std::for_each(data.begin(), data.end(), [](auto& value) {
+          value = generateRandomString();
+        });
       }
     }
     catch (std::exception& e) {
@@ -89,6 +131,8 @@ BENCHMARK(BM_DynamicCircleBufferCreation_k1GB);
 BENCHMARK(BM_StaticCircleBufferCreation_k1kB_push_back)->RangeMultiplier(2)->Range(8, 8<<10);
 BENCHMARK(BM_DynamicCircleBufferCreation_k1kB_push_back)->RangeMultiplier(2)->Range(8, 8<<10);
 
+BENCHMARK(BM_StaticCircleBufferCreation_k1kB_iteration)->RangeMultiplier(2)->Range(8, 8<<10);
+BENCHMARK(BM_DynamicCircleBufferCreation_k1kB_iteration)->RangeMultiplier(2)->Range(8, 8<<10);
 
 
 BENCHMARK_MAIN();
