@@ -42,17 +42,6 @@ namespace {
     }
   }
 
-  void BM_DynamicCircleBufferCreation_k1GB(benchmark::State& state) {
-    for (auto _ : state) {
-      try {
-        jm::dynamic_circular_buffer<std::string, k1GB> data;
-      }
-      catch (std::exception& e) {
-        std::cerr << e.what() << std::endl;
-      }
-    }
-  }
-
   void BM_StaticCircleBufferCreation_k1kB_push_back(benchmark::State& state) {
     srand(time(0));
     for (auto _ : state) {
@@ -126,7 +115,6 @@ namespace {
 BENCHMARK(BM_StaticCircleBufferCreation_k1kB);
 BENCHMARK(BM_DynamicCircleBufferCreation_k1kB);
 BENCHMARK(BM_DynamicCircleBufferCreation_k1MB);
-BENCHMARK(BM_DynamicCircleBufferCreation_k1GB);
 
 BENCHMARK(BM_StaticCircleBufferCreation_k1kB_push_back)->RangeMultiplier(2)->Range(8, 8<<10);
 BENCHMARK(BM_DynamicCircleBufferCreation_k1kB_push_back)->RangeMultiplier(2)->Range(8, 8<<10);
