@@ -702,10 +702,10 @@ namespace jm {
     };
 
     template<typename T, std::size_t N>
-    using StaticCircleBuffer = circular_buffer<T, N, std::array<detail::optional_storage<T>, N>>;
+    using static_circular_buffer = circular_buffer<T, N, std::array<detail::optional_storage<T>, N>>;
 
     template<typename T, std::size_t N>
-    using DynamicCircleBuffer = circular_buffer<T, N, std::vector<detail::optional_storage<T>>>;
+    using dynamic_circular_buffer = circular_buffer<T, N, std::vector<detail::optional_storage<T>>>;
 
 } // namespace jm
 
