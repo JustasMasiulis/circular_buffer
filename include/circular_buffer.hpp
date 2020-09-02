@@ -951,12 +951,12 @@ namespace jm {
 
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-      dynamic_circular_buffer(dynamic_circular_buffer&& other) : _head(1), _tail(0), _size(0), _buffer()
+      dynamic_circular_buffer(dynamic_circular_buffer&& other) JM_CB_NOEXCEPT : _head(1), _tail(0), _size(0), _buffer()
       {
         move_buffer(std::move(other));
       }
 
-      dynamic_circular_buffer& operator=(dynamic_circular_buffer&& other)
+      dynamic_circular_buffer& operator=(dynamic_circular_buffer&& other) JM_CB_NOEXCEPT
       {
         clear();
         move_buffer(std::move(other));
@@ -1229,13 +1229,6 @@ namespace jm {
           const_iterator(_buffer.data(), wrapper_t::increment(_tail, _buffer.size()), 0, _buffer.size()));
       }
     };
-
-    //template<typename T, std::size_t N>
-    //using static_circular_buffer = circular_buffer<T, N>;
-
-    //template<typename T, class Allocator = std::allocator<T>>
-    //using dynamic_circular_buffer = circular_buffer<T, Allocator>;
-
 } // namespace jm
 
 #endif // include guard

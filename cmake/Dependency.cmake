@@ -8,6 +8,15 @@ function (add_catch_and_benchmark)
 	)
 	
 	CPMAddPackage(
+	  NAME eigen
+	  GITLAB_REPOSITORY libeigen/eigen
+	  GIT_TAG 21ae2afd
+	  OPTIONS
+		"BUILD_TESTING OFF"
+	   
+	)
+	
+	CPMAddPackage(
 	  NAME benchmark
 	  GITHUB_REPOSITORY google/benchmark
 	  VERSION 1.4.1

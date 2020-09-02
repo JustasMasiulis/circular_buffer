@@ -33,7 +33,7 @@ if (CIRCULAR_BUFFER_TESTING)
 	add_executable ( circular_buffer_benchmark test/benchmark.cpp )
 
 	#add the library
-	target_link_libraries (circular_buffer_catch2 PRIVATE circular_buffer Catch2 Threads::Threads)
+	target_link_libraries (circular_buffer_catch2 PRIVATE circular_buffer Catch2 Threads::Threads eigen)
 	target_link_libraries (circular_buffer_benchmark PRIVATE circular_buffer benchmark Threads::Threads)
 	
 	catch_discover_tests(circular_buffer_catch2)

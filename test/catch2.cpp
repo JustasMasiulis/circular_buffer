@@ -812,3 +812,15 @@ TEST_CASE("dynamic cb_iterator complies to InputIterator")
   cbt::const_iterator non_c_it = it;
   non_c_it = it;
 }
+#include <Eigen/StdVector>
+
+
+TEST_CASE("Eigen custom allocation")
+{
+    
+    jm::dynamic_circular_buffer<Eigen::Vector4f, Eigen::aligned_allocator<jm::detail::optional_storage<Eigen::Vector4f>>> buf;
+    buf.reserve(1024);
+
+    for (int i = 0; i < 128; ++i)
+      buf.push_back({});
+}
