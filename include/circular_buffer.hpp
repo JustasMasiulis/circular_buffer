@@ -289,7 +289,7 @@ namespace jm {
         };
 
         template<typename T, std::size_t N, typename Container = std::array<detail::optional_storage<T>, N>>
-        auto make_array() {
+        auto make_storage() {
           if constexpr (std::is_same_v< Container, std::vector<detail::optional_storage<T>>>) {
             return Container(N);
           }
@@ -353,14 +353,14 @@ namespace jm {
 
     public:
         JM_CB_CONSTEXPR explicit circular_buffer()
-          : _head(1), _tail(0), _size(0),  _buffer(detail::make_array<T, N, Container>())
+          : _head(1), _tail(0), _size(0),  _buffer(detail::make_storage<T, N, Container>())
         {  }
 
 #if defined(JM_CIRCULAR_BUFFER_CXX_OLD)
         explicit
 #endif
             circular_buffer(size_type count, const T& value = T())
-            : _head(0), _tail(count - 1), _size(count), _buffer(detail::make_array<T, N, Container>())
+            : _head(0), _tail(count - 1), _size(count), _buffer(detail::make_storage<T, N, Container>())
         {
             if(JM_CB_UNLIKELY(_size > N))
                 throw std::out_of_range(
@@ -375,7 +375,7 @@ namespace jm {
 
         template<typename InputIt>
         circular_buffer(InputIt first, InputIt last)
-            : _head(0), _tail(0), _size(0), _buffer(detail::make_array<T, N, Container>())
+            : _head(0), _tail(0), _size(0), _buffer(detail::make_storage<T, N, Container>())
         {
             if(first != last) {
                 for(; first != last; ++first, ++_size) {
@@ -395,7 +395,7 @@ namespace jm {
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         circular_buffer(std::initializer_list<T> init)
-            : _head(0), _tail(init.size() - 1), _size(init.size()), _buffer(detail::make_array<T, N, Container>())
+            : _head(0), _tail(init.size() - 1), _size(init.size()), _buffer(detail::make_storage<T, N, Container>())
         {
             if(JM_CB_UNLIKELY(_size > N))
                 throw std::out_of_range(
@@ -413,7 +413,7 @@ namespace jm {
 #endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
         circular_buffer(const circular_buffer& other)
-            : _head(1), _tail(0), _size(0), _buffer(detail::make_array<T, N, Container>())
+            : _head(1), _tail(0), _size(0), _buffer(detail::make_storage<T, N, Container>())
         {
             copy_buffer(other);
         }
@@ -427,7 +427,7 @@ namespace jm {
 
 #if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
-        circular_buffer(circular_buffer&& other) : _head(1), _tail(0), _size(0), _buffer(detail::make_array<T, N, Container>())
+        circular_buffer(circular_buffer&& other) : _head(1), _tail(0), _size(0), _buffer(detail::make_storage<T, N, Container>())
         {
             move_buffer(std::move(other));
         }
