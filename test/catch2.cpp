@@ -812,15 +812,45 @@ TEST_CASE("dynamic cb_iterator complies to InputIterator")
   cbt::const_iterator non_c_it = it;
   non_c_it = it;
 }
+
+#include <Eigen/Geometry>
 #include <Eigen/StdVector>
 
 
-TEST_CASE("Eigen custom allocation")
+TEST_CASE("Eigen custom allocation Vector3f")
 {
     
-    jm::dynamic_circular_buffer<Eigen::Vector4f, Eigen::aligned_allocator<jm::detail::optional_storage<Eigen::Vector4f>>> buf;
-    buf.reserve(1024);
+    jm::dynamic_circular_buffer<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> buf1(8);
+    jm::dynamic_circular_buffer<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> buf2(8);
 
-    for (int i = 0; i < 128; ++i)
-      buf.push_back({});
+    for (int i = 0; i < 128; ++i) {
+      buf1.push_back(Eigen::Vector3f::Random());
+    }
+
+    for (auto value : buf1) {
+      buf2.push_back(value);
+    }
+
+    REQUIRE(buf1.size() == buf2.size());
+    REQUIRE(std::equal(buf1.begin(), buf1.end(), buf2.begin()));
+    *buf2.begin() = Eigen::Vector3f::Random();
+    REQUIRE(!std::equal(buf1.begin(), buf1.end(), buf2.begin()));
+}
+TEST_CASE("Eigen custom allocation Vector4f")
+{
+  jm::dynamic_circular_buffer<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f>> buf1(8);
+  jm::dynamic_circular_buffer<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f>> buf2(8);
+
+  for (int i = 0; i < 128; ++i) {
+    buf1.push_back(Eigen::Vector4f::Random());
+  }
+
+  for (auto value : buf1) {
+    buf2.push_back(value);
+  }
+
+  REQUIRE(buf1.size() == buf2.size());
+  REQUIRE(std::equal(buf1.begin(), buf1.end(), buf2.begin()));
+  *buf2.begin() = Eigen::Vector4f::Random();
+  REQUIRE(!std::equal(buf1.begin(), buf1.end(), buf2.begin()));
 }
