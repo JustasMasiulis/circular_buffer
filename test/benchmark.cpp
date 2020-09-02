@@ -23,7 +23,7 @@ namespace {
   void BM_DynamicCircleBufferCreation_k1kB(benchmark::State& state) {
     for (auto _ : state) {
       try {
-        jm::dynamic_circular_buffer<std::string, k1kB> data;
+        jm::dynamic_circular_buffer<std::string> data(k1kB);
       }
       catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
@@ -34,7 +34,8 @@ namespace {
   void BM_DynamicCircleBufferCreation_k1MB(benchmark::State& state) {
     for (auto _ : state) {
       try {
-        jm::dynamic_circular_buffer<std::string, k1MB> data;
+        jm::dynamic_circular_buffer<std::string> data;
+        data.reserve(k1MB);
       }
       catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
@@ -57,7 +58,8 @@ namespace {
     try {
       srand(time(0));
       for (auto _ : state) {
-        jm::dynamic_circular_buffer<std::string, k1kB> data;
+        jm::dynamic_circular_buffer<std::string> data;
+        data.reserve(k1kB);
         for (size_t i = 0; i < state.range(0); i++) {
           data.push_back(generateRandomString());
         }
@@ -93,7 +95,7 @@ namespace {
 
     try {
       for (auto _ : state) {
-        jm::dynamic_circular_buffer<std::string, k1kB> data;
+        jm::dynamic_circular_buffer<std::string> data(k1kB);
         state.PauseTiming();
         for (size_t i = 0; i < state.range(0); i++) {
           data.push_back(generateRandomString());
@@ -124,3 +126,4 @@ BENCHMARK(BM_DynamicCircleBufferCreation_k1kB_iteration)->RangeMultiplier(2)->Ra
 
 
 BENCHMARK_MAIN();
+

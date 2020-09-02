@@ -47,9 +47,9 @@ jm::static_circular_buffer<int, 16> gen_filled_cb(int size = 16)
     return cb;
 }
 
-jm::dynamic_circular_buffer<int, 16> dynamic_gen_filled_cb(int size = 16)
+jm::dynamic_circular_buffer<int> dynamic_gen_filled_cb(int size = 16)
 {
-  jm::dynamic_circular_buffer<int, 16> cb;
+  jm::dynamic_circular_buffer<int> cb(size);
   for (int i = 0; i < size; ++i)
     cb.push_back(i);
 
@@ -74,11 +74,12 @@ TEST_CASE("quick test for leaks")
 TEST_CASE("dynamic quick test for leaks")
 {
   {
-    jm::dynamic_circular_buffer<leak_checker, 2> buf;
+    jm::dynamic_circular_buffer<leak_checker> buf;
+    buf.reserve(2);
     for (int i = 0; i < 128; ++i)
       buf.push_back({});
-    jm::dynamic_circular_buffer<leak_checker, 7> buf2(buf.begin(), buf.end());
-    jm::dynamic_circular_buffer<leak_checker, 2> buf3{ {}, {} };
+    jm::dynamic_circular_buffer<leak_checker> buf2(buf.begin(), buf.end());
+    jm::dynamic_circular_buffer<leak_checker> buf3{ {}, {} };
     buf = buf3;
     buf2.clear();
   }
@@ -125,34 +126,35 @@ TEST_CASE("dynamic default construction")
 {
   SECTION("const")
   {
-    const jm::dynamic_circular_buffer<int, 16> cb;
-    REQUIRE(cb.size() == 0);
+    const jm::dynamic_circular_buffer<int> cb(16);
+    REQUIRE(cb.size() == 16);
 
     REQUIRE(cb.max_size() == 16);
 
-    REQUIRE(cb.begin() == cb.end());
+    REQUIRE(cb.begin() != cb.end());
 
-    REQUIRE(cb.cbegin() == cb.cend());
+    REQUIRE(cb.cbegin() != cb.cend());
 
-    REQUIRE(cb.rbegin() == cb.rend());
+    REQUIRE(cb.rbegin() != cb.rend());
 
-    REQUIRE(cb.crbegin() == cb.crend());
+    REQUIRE(cb.crbegin() != cb.crend());
   }
 
   SECTION("non const")
   {
-    jm::dynamic_circular_buffer<int, 16> cb;
-    REQUIRE(cb.size() == 0);
+    jm::dynamic_circular_buffer<int> cb(16);
+
+    REQUIRE(cb.size() == 16);
 
     REQUIRE(cb.max_size() == 16);
 
-    REQUIRE(cb.begin() == cb.end());
+    REQUIRE(cb.begin() != cb.end());
 
-    REQUIRE(cb.cbegin() == cb.cend());
+    REQUIRE(cb.cbegin() != cb.cend());
 
-    REQUIRE(cb.rbegin() == cb.rend());
+    REQUIRE(cb.rbegin() != cb.rend());
 
-    REQUIRE(cb.crbegin() == cb.crend());
+    REQUIRE(cb.crbegin() != cb.crend());
   }
 }
 
@@ -209,7 +211,7 @@ TEST_CASE("dynamic copy assignment")
 {
   auto cb = dynamic_gen_filled_cb(15);
 
-  decltype(cb) other;
+  decltype(cb) other(15);
   other = cb;
 
   REQUIRE(std::equal(cb.begin(), cb.end(), other.begin()));
@@ -238,7 +240,7 @@ TEST_CASE("dynamic move assignment")
 
   REQUIRE(std::equal(cb.begin(), cb.end(), other.begin()));
 }
-
+//
 #ifndef JM_CIRCULAR_BUFFER_CXX_OLD
 TEST_CASE("initializer_list construction")
 {
@@ -248,10 +250,10 @@ TEST_CASE("initializer_list construction")
 
 TEST_CASE("dynamic initializer_list construction")
 {
-  REQUIRE_THROWS(void(jm::dynamic_circular_buffer<int, 4>{ 1, 2, 3, 5, 6 }));
-  jm::dynamic_circular_buffer<int, 4> buf{ { 1, 2, 3, 5 } };
+  //REQUIRE_THROWS(void(jm::dynamic_circular_buffer<int>{ 1, 2, 3, 5, 6 }));
+  //jm::dynamic_circular_buffer<int> buf{ { 1, 2, 3, 5 } };
 }
-
+//
 TEST_CASE("iterators construction")
 {
     {
@@ -274,16 +276,16 @@ TEST_CASE("dynamic iterators construction")
 {
   {
     auto cb = dynamic_gen_filled_cb(15);
-    REQUIRE_THROWS(void(jm::dynamic_circular_buffer<int, 4>{ cb.begin(), cb.end() }));
+    //REQUIRE_THROWS(void(jm::dynamic_circular_buffer<int>{ cb.begin(), cb.end() }));
 
-    jm::dynamic_circular_buffer<int, 16> cb2(cb.begin(), cb.end());
+    jm::dynamic_circular_buffer<int> cb2(cb.begin(), cb.end());
 
     REQUIRE(std::equal(cb.begin(), cb.end(), cb2.begin()));
     REQUIRE(cb.size() == cb2.size());
   }
 
-  jm::dynamic_circular_buffer<int, 4> buf1{ 1, 2, 3, 4 };
-  jm::dynamic_circular_buffer<int, 4> buf2{ buf1.begin(), buf1.end() };
+  jm::dynamic_circular_buffer<int> buf1{ 1, 2, 3, 4 };
+  jm::dynamic_circular_buffer<int> buf2{ buf1.begin(), buf1.end() };
 
   REQUIRE(std::equal(buf1.begin(), buf1.end(), buf2.begin()));
   REQUIRE(buf1.size() == buf2.size());
@@ -303,7 +305,7 @@ TEST_CASE("n items construction")
 TEST_CASE("dynamic n items construction")
 {
   constexpr float               float_val = 2.f;
-  jm::dynamic_circular_buffer<float, 5> cb(4, float_val);
+  jm::dynamic_circular_buffer<float> cb(4, float_val);
   for (auto item : cb)
     REQUIRE(item == float_val);
 
@@ -343,7 +345,7 @@ TEST_CASE("dynamic clear empty full")
     auto cb = dynamic_gen_filled_cb(12);
     REQUIRE(cb.size() == 12);
     REQUIRE(!cb.empty());
-    REQUIRE(!cb.full());
+    REQUIRE(cb.full());
     cb.clear();
     REQUIRE(cb.empty());
     REQUIRE(!cb.full());
@@ -372,7 +374,7 @@ TEST_CASE("max_size")
 
 TEST_CASE("dynamic max_size")
 {
-  jm::dynamic_circular_buffer<int, 5> cb1;
+  jm::dynamic_circular_buffer<int> cb1(5);
   REQUIRE(cb1.max_size() == 5);
 }
 
@@ -463,7 +465,7 @@ TEST_CASE("dynamic pop_front")
 
 TEST_CASE("push_back")
 {
-    jm::circular_buffer<int, 16> cb;
+    jm::static_circular_buffer<int, 16> cb;
 
     for(auto i : inc_vec) {
         cb.push_back(i);
@@ -478,7 +480,8 @@ TEST_CASE("push_back")
 }
 TEST_CASE("dynamic push_back")
 {
-  jm::static_circular_buffer<int, 16> cb;
+  jm::dynamic_circular_buffer<int> cb;
+  cb.reserve(inc_vec.size());
 
   for (auto i : inc_vec) {
     cb.push_back(i);
@@ -509,8 +512,8 @@ TEST_CASE("push_front")
 
 TEST_CASE("dynamic push_front")
 {
-  jm::dynamic_circular_buffer<int, 16> cb;
-
+  jm::dynamic_circular_buffer<int> cb;
+  cb.reserve(inc_vec.size());
   for (auto i : inc_vec) {
     cb.push_front(i);
     REQUIRE(cb.front() == i);
@@ -541,7 +544,8 @@ TEST_CASE("emplace_back")
 
 TEST_CASE("dynamic emplace_back")
 {
-  jm::dynamic_circular_buffer<int, 16> cb;
+  jm::dynamic_circular_buffer<int> cb;
+  cb.reserve(inc_vec.size());
 
   for (auto i : inc_vec) {
     cb.emplace_back(i);
@@ -571,7 +575,8 @@ TEST_CASE("emplace_front")
 }
 TEST_CASE("dynamic emplace_front")
 {
-  jm::dynamic_circular_buffer<int, 16> cb;
+  jm::dynamic_circular_buffer<int> cb;
+  cb.reserve(inc_vec.size());
 
   for (auto i : inc_vec) {
     cb.emplace_front(i);
@@ -664,8 +669,8 @@ static_assert(std::is_same<decltype(++r), decltype(r) &>::value,
 
 TEST_CASE("dynamic cb_iterator complies to Iterator")
 {
-  using cbt = jm::dynamic_circular_buffer<int, 4>;
-  cbt cb;
+  using cbt = jm::dynamic_circular_buffer<int>;
+  cbt cb(2);
   cb.push_back(1);
   cb.push_back(2);
 
@@ -776,8 +781,8 @@ TEST_CASE("cb_iterator complies to InputIterator")
 
 TEST_CASE("dynamic cb_iterator complies to InputIterator")
 {
-  using cbt = jm::dynamic_circular_buffer<int, 4>;
-  cbt cb;
+  using cbt = jm::dynamic_circular_buffer<int>;
+  cbt cb(2);
   cb.push_back({ 1 });
   cb.push_back({ 2 });
 
