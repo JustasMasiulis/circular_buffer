@@ -145,6 +145,8 @@ namespace jm {
       inline explicit JM_CB_CONSTEXPR
         optional_storage(const T& value) JM_CB_NOEXCEPT : _value(value)
       {}
+        
+      optional_storage(const optional_storage &) {}
 
       inline explicit constexpr optional_storage(T&& value)
         : _value(std::move(value))
@@ -313,9 +315,9 @@ namespace jm {
       friend class cb_iterator;
 
       S* _buf;
-      std::size_t _max_size;
       std::size_t _pos;
       std::size_t _left_in_forward;
+      std::size_t _max_size;
 
       typedef detail::cb_index_wrapper<std::size_t, 0> wrapper_t;
 
@@ -348,7 +350,8 @@ namespace jm {
         cb_iterator(const cb_iterator<TSnc, Tnc, 0>& other) JM_CB_NOEXCEPT
         : _buf(other._buf),
         _pos(other._pos),
-        _left_in_forward(other._left_in_forward)
+        _left_in_forward(other._left_in_forward),
+        _max_size(other._max_size)
       {}
 
       template<class TSnc, class Tnc>
@@ -358,13 +361,14 @@ namespace jm {
         _buf = other._buf;
         _pos = other._pos;
         _left_in_forward = other._left_in_forward;
+        _max_size = other._max_size;
         return *this;
       };
 
 
       JM_CB_CONSTEXPR reference operator*() const JM_CB_NOEXCEPT
       {
-        return *(_buf + _pos);
+        return (_buf + _pos)->_value;
       }
 
       JM_CB_CONSTEXPR pointer operator->() const JM_CB_NOEXCEPT
@@ -407,7 +411,7 @@ namespace jm {
         operator==(const cb_iterator<Tx, Ty, 0>& lhs) const JM_CB_NOEXCEPT
       {
         return lhs._left_in_forward == _left_in_forward && lhs._pos == _pos &&
-          lhs._buf == _buf;
+          lhs._buf == _buf && lhs._max_size == _max_size;
       }
 
       template<typename Tx, typename Ty>
@@ -820,10 +824,10 @@ namespace jm {
     }
   };
 
-  template<typename T, class Allocator = std::allocator<T>>
+  template<typename T, class Allocator = std::allocator<detail::optional_storage<T>>>
   class dynamic_circular_buffer {
   public:
-    typedef std::vector<T, Allocator>    container;
+    typedef std::vector<detail::optional_storage<T>, Allocator>    container;
     typedef T                                                      value_type;
     typedef std::size_t                                            size_type;
     typedef std::ptrdiff_t                                         difference_type;
@@ -831,8 +835,8 @@ namespace jm {
     typedef const T& const_reference;
     typedef T* pointer;
     typedef const T* const_pointer;
-    typedef detail::cb_iterator<T, T, 0> iterator;
-    typedef detail::cb_iterator<const T, const T, 0>
+    typedef detail::cb_iterator<detail::optional_storage<T>, T, 0> iterator;
+    typedef detail::cb_iterator<const detail::optional_storage<T>, const T, 0>
       const_iterator;
     typedef std::reverse_iterator<iterator>       reverse_iterator;
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
@@ -846,7 +850,7 @@ namespace jm {
     size_type    _size;
     container    _buffer;
 
-    inline void destroy(size_type idx) JM_CB_NOEXCEPT { _buffer[idx].~T(); }
+    inline void destroy(size_type idx) JM_CB_NOEXCEPT { _buffer[idx]._value.~T(); }
 
     inline void copy_buffer(const dynamic_circular_buffer& other)
     {
@@ -972,7 +976,27 @@ namespace jm {
     /// capacity
     JM_CB_CONSTEXPR void reserve(size_type new_cap) {
       if (!_buffer.empty()) throw std::runtime_error("reserve called once");
+        
       _buffer.resize(new_cap);
+    }
+      JM_CB_CONSTEXPR void resize(size_type new_size) {
+        if (new_size > _buffer.size()) throw std::runtime_error("new_cap > max_size()");
+        
+        const auto current_size = size();
+        difference_type count = static_cast<difference_type>(new_size - current_size);
+        const bool isexpend =  count >= 0;
+        if (isexpend) {
+          while (count--) {
+            push_back({});
+          }
+        } else {
+          while (count++) {
+            pop_back();
+          }
+        }
+      }
+    JM_CB_CONSTEXPR size_type capacity() const JM_CB_NOEXCEPT{
+      return _buffer.size();
     }
 
     JM_CB_CONSTEXPR bool empty() const JM_CB_NOEXCEPT { return _size == 0; }
@@ -986,22 +1010,22 @@ namespace jm {
     /// element access
     JM_CB_CXX14_CONSTEXPR reference front() JM_CB_NOEXCEPT
     {
-      return _buffer[_head];
+      return _buffer[_head]._value;
     }
 
     JM_CB_CONSTEXPR const_reference front() const JM_CB_NOEXCEPT
     {
-      return _buffer[_head];
+      return _buffer[_head]._value;
     }
 
     JM_CB_CXX14_CONSTEXPR reference back() JM_CB_NOEXCEPT
     {
-      return _buffer[_tail];
+      return _buffer[_tail]._value;
     }
 
     JM_CB_CONSTEXPR const_reference back() const JM_CB_NOEXCEPT
     {
-      return _buffer[_tail];
+      return _buffer[_tail]._value;
     }
 
     JM_CB_CXX14_CONSTEXPR pointer data() JM_CB_NOEXCEPT
@@ -1022,7 +1046,7 @@ namespace jm {
         new_tail = _head;
         _head = wrapper_t::increment(_head, _buffer.size());
         --_size;
-        _buffer[new_tail] = value;
+        _buffer[new_tail]._value = value;
       }
       else {
         new_tail = wrapper_t::increment(_tail, _buffer.size());
@@ -1040,7 +1064,7 @@ namespace jm {
         new_head = _tail;
         _tail = wrapper_t::decrement(_tail, _buffer.size());
         --_size;
-        _buffer[new_head] = value;
+        _buffer[new_head]._value = value;
       }
       else {
         new_head = wrapper_t::decrement(_head, _buffer.size());
@@ -1060,7 +1084,7 @@ namespace jm {
         new_tail = _head;
         _head = wrapper_t::increment(_head, _buffer.size());
         --_size;
-        _buffer[new_tail] = detail::move_if_noexcept_assign(value);
+        _buffer[new_tail]._value = detail::move_if_noexcept_assign(value);
       }
       else {
         new_tail = wrapper_t::increment(_tail, _buffer.size());
@@ -1079,7 +1103,7 @@ namespace jm {
         new_head = _tail;
         _tail = wrapper_t::decrement(_tail, _buffer.size());
         --_size;
-        _buffer[new_head] = detail::move_if_noexcept_assign(value);
+        _buffer[new_head]._value = detail::move_if_noexcept_assign(value);
       }
       else {
         new_head = wrapper_t::decrement(_head, _buffer.size());
