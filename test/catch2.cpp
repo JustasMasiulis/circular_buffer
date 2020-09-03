@@ -87,29 +87,6 @@ TEST_CASE("dynamic quick test for leaks")
   REQUIRE(num_constructions == num_deletions);
 }
 
-TEST_CASE("dynamic capacity resize test")
-{
-  
-  jm::dynamic_circular_buffer<leak_checker> buf;
-    
-  REQUIRE(buf.capacity() == 0);
-    
-  buf.reserve(16);
-  REQUIRE_THROWS(void(buf.reserve(16)));
-    
-  REQUIRE(buf.capacity() == buf.max_size());
-  REQUIRE(buf.capacity() == 16);
-  REQUIRE(buf.max_size() == 16);
-  REQUIRE(buf.size() == 0);
-  buf.resize(1);
-  REQUIRE(buf.size() == 1);
-  buf.resize(6);
-  REQUIRE(buf.size() == 6);
-  REQUIRE_THROWS(void(buf.resize(20)));
-  buf.resize(3);
-  REQUIRE(buf.size() == 3);
-}
-
 TEST_CASE("default construction")
 {
     SECTION("const")

@@ -885,7 +885,15 @@ namespace jm {
 #if defined(JM_CIRCULAR_BUFFER_CXX_OLD)
     explicit
 #endif
-      dynamic_circular_buffer(size_type count, const T& value = T())
+      dynamic_circular_buffer(size_type count)
+      : _head(0), _tail(count - 1), _size(count), _buffer(count)
+    {
+    }
+
+#if defined(JM_CIRCULAR_BUFFER_CXX_OLD)
+    explicit
+#endif
+      dynamic_circular_buffer(size_type count, const T& value)
       : _head(0), _tail(count - 1), _size(count), _buffer(count)
     {
 
