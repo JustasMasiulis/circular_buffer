@@ -118,9 +118,6 @@ namespace jm {
       }
     };
 
-
-#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
     template<class T>
     constexpr typename std::conditional<(!std::is_nothrow_move_assignable<T>::value&&
       std::is_copy_assignable<T>::value),
@@ -145,8 +142,8 @@ namespace jm {
       inline explicit JM_CB_CONSTEXPR
         optional_storage(const T& value) JM_CB_NOEXCEPT : _value(value)
       {}
-        
-      optional_storage(const optional_storage &) {}
+
+      optional_storage(const optional_storage&) {}
 
       inline explicit constexpr optional_storage(T&& value)
         : _value(std::move(value))
@@ -175,29 +172,6 @@ namespace jm {
 
       ~optional_storage() = default;
     };
-
-#else
-
-    template<class T>
-    union optional_storage {
-      alignas(T) char _value[sizeof(T)];
-      T _value;
-
-      inline explicit JM_CB_CONSTEXPR optional_storage() JM_CB_NOEXCEPT : _empty()
-      {}
-
-      inline explicit JM_CB_CONSTEXPR
-        optional_storage(const T& value) JM_CB_NOEXCEPT : _value(value)
-      {}
-
-      ~optional_storage() {}
-
-      inline explicit constexpr optional_storage(T&& value)
-        : _value(std::move(value))
-      {}
-    };
-
-#endif
 
     template<class S, class TC, std::size_t N>
     class cb_iterator {
@@ -304,7 +278,7 @@ namespace jm {
       {
         return !(operator==(lhs));
       }
-    };
+  };
 
     // special case when we need dynamic buffer and we can't specify size buffer at compile time
     // so we make N = 0 and use specialize cb_index_wrapper template 
@@ -421,7 +395,7 @@ namespace jm {
         return !(operator==(lhs));
       }
     };
-  } // namespace detail
+} // namespace detail
 
   template<typename T, std::size_t N>
   class static_circular_buffer {
@@ -460,9 +434,6 @@ namespace jm {
         push_back(*first);
     }
 
-
-#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
     inline void move_buffer(static_circular_buffer&& other)
     {
       iterator       first = other.begin();
@@ -472,16 +443,12 @@ namespace jm {
         emplace_back(std::move(*first));
     }
 
-#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
   public:
     JM_CB_CONSTEXPR explicit static_circular_buffer()
       : _head(1), _tail(0), _size(0), _buffer()
     {  }
 
-#if defined(JM_CIRCULAR_BUFFER_CXX_OLD)
     explicit
-#endif
       static_circular_buffer(size_type count, const T& value = T())
       : _head(0), _tail(count - 1), _size(count), _buffer()
     {
@@ -515,8 +482,6 @@ namespace jm {
         _head = 1;
     }
 
-#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
     static_circular_buffer(std::initializer_list<T> init)
       : _head(0), _tail(init.size() - 1), _size(init.size()), _buffer()
     {
@@ -533,8 +498,6 @@ namespace jm {
         new(JM_CB_ADDRESSOF(buf_ptr->_value)) T(*it);
     }
 
-#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
     static_circular_buffer(const static_circular_buffer& other)
       : _head(1), _tail(0), _size(0), _buffer()
     {
@@ -548,8 +511,6 @@ namespace jm {
       return *this;
     }
 
-#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
     static_circular_buffer(static_circular_buffer&& other) : _head(1), _tail(0), _size(0), _buffer()
     {
       move_buffer(std::move(other));
@@ -561,8 +522,6 @@ namespace jm {
       move_buffer(std::move(other));
       return *this;
     }
-
-#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
     ~static_circular_buffer() { clear(); }
 
@@ -643,8 +602,6 @@ namespace jm {
       ++_size;
     }
 
-#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
     void push_back(value_type&& value)
     {
       size_type new_tail;
@@ -720,8 +677,6 @@ namespace jm {
       _head = new_head;
       ++_size;
     }
-
-#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
     JM_CB_CXX14_CONSTEXPR void pop_back() JM_CB_NOEXCEPT
     {
@@ -861,9 +816,6 @@ namespace jm {
         push_back(*first);
     }
 
-
-#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
     inline void move_buffer(dynamic_circular_buffer&& other)
     {
       reserve(other.max_size());
@@ -875,24 +827,18 @@ namespace jm {
         emplace_back(std::move(*first));
     }
 
-#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
   public:
     JM_CB_CONSTEXPR explicit dynamic_circular_buffer()
       : _head(1), _tail(0), _size(0), _buffer()
     {  }
 
-#if defined(JM_CIRCULAR_BUFFER_CXX_OLD)
     explicit
-#endif
       dynamic_circular_buffer(size_type count)
       : _head(0), _tail(count - 1), _size(count), _buffer(count)
     {
     }
 
-#if defined(JM_CIRCULAR_BUFFER_CXX_OLD)
     explicit
-#endif
       dynamic_circular_buffer(size_type count, const T& value)
       : _head(0), _tail(count - 1), _size(count), _buffer(count)
     {
@@ -927,8 +873,6 @@ namespace jm {
         _head = 1;
     }
 
-#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
     dynamic_circular_buffer(std::initializer_list<T> init)
       : _head(0), _tail(init.size() - 1), _size(init.size()), _buffer(init.size())
     {
@@ -947,8 +891,6 @@ namespace jm {
 
     }
 
-#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
     dynamic_circular_buffer(const dynamic_circular_buffer& other)
       : _head(1), _tail(0), _size(0), _buffer(other.max_size())
     {
@@ -963,8 +905,6 @@ namespace jm {
       return *this;
     }
 
-#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
     dynamic_circular_buffer(dynamic_circular_buffer&& other) JM_CB_NOEXCEPT : _head(1), _tail(0), _size(0), _buffer()
     {
       move_buffer(std::move(other));
@@ -977,33 +917,34 @@ namespace jm {
       return *this;
     }
 
-#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
     ~dynamic_circular_buffer() { clear(); }
 
     /// capacity
     JM_CB_CONSTEXPR void reserve(size_type new_cap) {
-      if (!_buffer.empty()) throw std::runtime_error("reserve called once");
-        
+      if (JM_CB_UNLIKELY( !_buffer.empty() )) throw std::runtime_error("reserve called once");
+
       _buffer.resize(new_cap);
     }
-      JM_CB_CONSTEXPR void resize(size_type new_size) {
-        if (new_size > _buffer.size()) throw std::runtime_error("new_cap > max_size()");
-        
-        const auto current_size = size();
-        difference_type count = static_cast<difference_type>(new_size - current_size);
-        const bool isexpend =  count >= 0;
-        if (isexpend) {
-          while (count--) {
-            push_back({});
-          }
-        } else {
-          while (count++) {
-            pop_back();
-          }
+
+    JM_CB_CONSTEXPR void resize(size_type new_size) {
+      if ( JM_CB_UNLIKELY( new_size > _buffer.size() ) ) throw std::runtime_error("new_cap > max_size()");
+
+      const auto current_size = size();
+      difference_type count = static_cast<difference_type>(new_size - current_size);
+      const bool isexpend = count >= 0;
+
+      if (JM_CB_LIKELY(isexpend)) {
+        while (count--) {
+          push_back({});
         }
       }
-    JM_CB_CONSTEXPR size_type capacity() const JM_CB_NOEXCEPT{
+      else {
+        while (count++) {
+          pop_back();
+        }
+      }
+    }
+    JM_CB_CONSTEXPR size_type capacity() const JM_CB_NOEXCEPT {
       return _buffer.size();
     }
 
@@ -1083,8 +1024,6 @@ namespace jm {
       ++_size;
     }
 
-#if !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
-
     void push_back(value_type&& value)
     {
       size_type new_tail;
@@ -1160,8 +1099,6 @@ namespace jm {
       _head = new_head;
       ++_size;
     }
-
-#endif // !defined(JM_CIRCULAR_BUFFER_CXX_OLD)
 
     JM_CB_CXX14_CONSTEXPR void pop_back() JM_CB_NOEXCEPT
     {

@@ -113,17 +113,111 @@ namespace {
   }
 
 }
-// Register the function as a benchmark
+
+#include <Eigen/Geometry>
+#include <Eigen/StdVector>
+
+void BM_STDVectorEigen_1K_elements_without_Allocator(benchmark::State& state) {
+
+  try {
+    for (auto _ : state) {
+      state.PauseTiming();
+      const auto randomValue = Eigen::Vector4f::Random();
+      std::vector<Eigen::Vector4f> data(state.range(0), randomValue);
+      state.ResumeTiming();
+
+      std::for_each(data.begin(), data.end(), [&](auto& value) {
+        const auto randomValue = Eigen::Vector4f::Random();
+        benchmark::DoNotOptimize(value.dot(randomValue));
+      });
+    }
+  }
+  catch (std::exception& e) {
+    std::cerr << e.what() << std::endl;
+  }
+}
+
+void BM_STDVectorEigen_1K_elements_with_Allocator(benchmark::State& state) {
+
+  try {
+    for (auto _ : state) {
+      state.PauseTiming();
+      const auto randomValue = Eigen::Vector4f::Random();
+      std::vector<Eigen::Vector4f, Eigen::aligned_allocator<Eigen::Vector4f>> data(state.range(0), randomValue);
+      state.ResumeTiming();
+
+      std::for_each(data.begin(), data.end(), [](auto& value) {
+        const auto randomValue = Eigen::Vector4f::Random();
+        benchmark::DoNotOptimize(value.dot(randomValue));
+      });
+    }
+  }
+  catch (std::exception& e) {
+    std::cerr << e.what() << std::endl;
+  }
+}
+
+void BM_DynamicCircleBufferEigen_1K_elements_without_Allocator(benchmark::State& state) {
+
+  try {
+    for (auto _ : state) {
+      state.PauseTiming();
+      const auto randomValue = Eigen::Vector4f::Random();
+      jm::dynamic_circular_buffer<Eigen::Vector4f> data(state.range(0), randomValue);
+      state.ResumeTiming();
+
+      std::for_each(data.begin(), data.end(), [](auto& value) {
+        const auto randomValue = Eigen::Vector4f::Random();
+        benchmark::DoNotOptimize(value.dot(randomValue));
+      });
+    }
+  }
+  catch (std::exception& e) {
+    std::cerr << e.what() << std::endl;
+  }
+}
+
+void BM_DynamicCircleBufferEigen_1K_elements_with_Allocator(benchmark::State& state) {
+
+  try {
+    for (auto _ : state) {
+      state.PauseTiming();
+      const auto randomValue = Eigen::Vector4f::Random();
+      jm::dynamic_circular_buffer<Eigen::Vector4f, Eigen::aligned_allocator< jm::detail::optional_storage<Eigen::Vector4f> >> data(state.range(0), randomValue);
+      state.ResumeTiming();
+
+      std::for_each(data.begin(), data.end(), [](auto& value) {
+        const auto randomValue = Eigen::Vector4f::Random();
+        benchmark::DoNotOptimize(value.dot(randomValue));
+      });
+    }
+  }
+  catch (std::exception& e) {
+    std::cerr << e.what() << std::endl;
+  }
+}
+
+//Register the function as a benchmark
 BENCHMARK(BM_StaticCircleBufferCreation_k1kB);
 BENCHMARK(BM_DynamicCircleBufferCreation_k1kB);
 BENCHMARK(BM_DynamicCircleBufferCreation_k1MB);
 
-BENCHMARK(BM_StaticCircleBufferCreation_k1kB_push_back)->RangeMultiplier(2)->Range(8, 8<<10);
-BENCHMARK(BM_DynamicCircleBufferCreation_k1kB_push_back)->RangeMultiplier(2)->Range(8, 8<<10);
+BENCHMARK(BM_StaticCircleBufferCreation_k1kB_push_back)->RangeMultiplier(2)->Range(128, 8<<8);
+BENCHMARK(BM_DynamicCircleBufferCreation_k1kB_push_back)->RangeMultiplier(2)->Range(128, 8<<8);
 
-BENCHMARK(BM_StaticCircleBufferCreation_k1kB_iteration)->RangeMultiplier(2)->Range(8, 8<<10);
-BENCHMARK(BM_DynamicCircleBufferCreation_k1kB_iteration)->RangeMultiplier(2)->Range(8, 8<<10);
+BENCHMARK(BM_StaticCircleBufferCreation_k1kB_iteration)->RangeMultiplier(2)->Range(128, 8<<8);
+BENCHMARK(BM_DynamicCircleBufferCreation_k1kB_iteration)->RangeMultiplier(2)->Range(128, 8<<8);
+
+BENCHMARK(BM_DynamicCircleBufferEigen_1K_elements_without_Allocator)->RangeMultiplier(2)->Range(128, 8<<8);
+BENCHMARK(BM_STDVectorEigen_1K_elements_without_Allocator)->RangeMultiplier(2)->Range(128, 8<<8);
+
+
+BENCHMARK(BM_DynamicCircleBufferEigen_1K_elements_with_Allocator)->RangeMultiplier(2)->Range(128, 8<<8);
+BENCHMARK(BM_STDVectorEigen_1K_elements_with_Allocator)->RangeMultiplier(2)->Range(128, 8<<8);
+
 
 
 BENCHMARK_MAIN();
+
+
 
