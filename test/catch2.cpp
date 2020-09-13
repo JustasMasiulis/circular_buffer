@@ -816,7 +816,6 @@ TEST_CASE("dynamic cb_iterator complies to InputIterator")
 #include <Eigen/Geometry>
 #include <Eigen/StdVector>
 
-
 TEST_CASE("Eigen custom allocation Vector3f")
 {
    
