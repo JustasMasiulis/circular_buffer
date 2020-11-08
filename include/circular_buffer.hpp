@@ -468,7 +468,21 @@ namespace jm {
         {
             return JM_CB_ADDRESSOF(_buffer[0]._value);
         }
+        
+        JM_CB_CXX14_CONSTEXPR reference operator[](size_type i) JM_CB_NOEXCEPT
+        {
+            return _buffer[(_head + i) % N]._value;
+        }
 
+        JM_CB_CXX14_CONSTEXPR reference at(size_type i)
+        {
+            if (i >= N)
+            {
+                throw std::out_of_range("Array index error");
+            }
+            return _buffer[(_head + i) % N]._value;
+        }
+        
         /// modifiers
         void push_back(const value_type& value)
         {
