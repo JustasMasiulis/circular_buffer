@@ -226,7 +226,7 @@ namespace jm {
                 _pos             = other._pos;
                 _left_in_forward = other._left_in_forward;
                 return *this;
-            };
+            }
 
 
             JM_CB_CONSTEXPR reference operator*() const JM_CB_NOEXCEPT
