@@ -10,28 +10,32 @@ target_sources(circular_buffer INTERFACE $<BUILD_INTERFACE:${detail_header_files
 target_include_directories(circular_buffer INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>)
 target_include_directories(circular_buffer SYSTEM INTERFACE $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>)
 
-add_executable(tests_main ${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp)
-target_link_libraries(tests_main circular_buffer)
+option(JM_CIRCULAR_BUFFER_BUILD_TESTS "Build tests for circular buffer" ON)
 
-# catch integration for tests
+if (JM_CIRCULAR_BUFFER_BUILD_TESTS)
+	add_executable(tests_main ${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp)
+	target_link_libraries(tests_main circular_buffer)
 
-set (CATCH_INCLUDE_PATH "${PROJECT_SOURCE_DIR}/Catch/include")
+	# catch integration for tests
 
-include ("${PROJECT_SOURCE_DIR}/Catch/contrib/ParseAndAddCatchTests.cmake")
+	set (CATCH_INCLUDE_PATH "${PROJECT_SOURCE_DIR}/Catch/include")
 
-set (TEST_APP_NAME "circular_buffer_test")
+	include ("${PROJECT_SOURCE_DIR}/Catch/contrib/ParseAndAddCatchTests.cmake")
 
-include_directories (${PROJECT_SOURCE_DIR}/include ${CATCH_INCLUDE_PATH})
+	set (TEST_APP_NAME "circular_buffer_test")
 
-set (TEST_SOURCE_FILES
-		${PROJECT_SOURCE_DIR}/test/main.cpp)
+	include_directories (${PROJECT_SOURCE_DIR}/include ${CATCH_INCLUDE_PATH})
 
-#set target executable
-add_executable (${TEST_APP_NAME} ${TEST_SOURCE_FILES})
+	set (TEST_SOURCE_FILES
+			${PROJECT_SOURCE_DIR}/test/main.cpp)
 
-#add the library
-target_link_libraries (${TEST_APP_NAME} circular_buffer)
+	#set target executable
+	add_executable (${TEST_APP_NAME} ${TEST_SOURCE_FILES})
 
-enable_testing()
+	#add the library
+	target_link_libraries (${TEST_APP_NAME} circular_buffer)
 
-ParseAndAddCatchTests (${TEST_APP_NAME})
+	enable_testing()
+
+	ParseAndAddCatchTests (${TEST_APP_NAME})
+endif()
